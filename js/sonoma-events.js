@@ -34,6 +34,10 @@
             this.addListeners();
 
             this.addHook( 'afterPagination' , this.scrollTop );
+            this.addHook( 'afterInit' , this.currentMonthHeader.bind( this ) );
+            this.addHook( 'afterUpdate' , this.currentMonthHeader.bind( this ) );
+
+            this.triggerHook( 'afterInit' );
 
         },
 
@@ -88,7 +92,9 @@
 
         pagination: function( event ) {
 
+            
             if (event.target.classList.contains( 'son-page' ) ) {
+                event.preventDefault();
                 this.collect( null, event.target.dataset.page );
                 this.triggerHook( 'afterPagination' );
             }
@@ -96,7 +102,9 @@
         },
 
         changeMonth: function ( event ) {
+
             if (event.target.classList.contains( 'nav-month' ) ) {
+                event.preventDefault();
                 // if also disabled return early
                 if (event.target.classList.contains( 'disabled' )) return;
                 this.target.dataset.month = event.target.dataset.month;
@@ -113,6 +121,7 @@
         switchView: function (event) {
 
             if (event.target.classList.contains( 'view' ) ) {
+                event.preventDefault();
                 this.view = event.target.dataset.view;
                 this.target.dataset.view = this.view;
                 this.setMonthNavigation();
@@ -144,10 +153,12 @@
             let year = this.month.slice(0,4),
                 month = this.month.slice(4);
 
-            const date = new Date( `${year}-${month}-01` );
+            const date = new Date( `${year}-${month}-01T00:00:00` );
 
             const previous = this.addMonths( date , -1 ),
                     next = this.addMonths( date, 1 );
+
+            console.log( previous , next );
             
             this.previous.dataset.month = `${this.dateFormated(previous)}`;
             this.next.dataset.month = `${this.dateFormated(next)}`;
@@ -156,7 +167,6 @@
                 this.previous.classList.add( 'disabled' );
             } else {
                 this.previous.classList.remove( 'disabled' );
-
             }
 
             if (this.next.dataset.month > this.target.dataset.upperbound ) {
@@ -177,6 +187,33 @@
             var year = date.toLocaleString("default", { year: "numeric" });
             var month = date.toLocaleString("default", { month: "2-digit" }); 
             return `${year}${month}`;
+        },
+
+        numberToMonth: function(num) {
+            const monthMap = {
+                '01': 'January',
+                '02': 'February',
+                '03': 'March',
+                '04': 'April',
+                '05': 'May',
+                '06': 'June',
+                '07': 'July',
+                '08': 'August',
+                '09': 'September',
+                '10': 'October',
+                '11': 'November',
+                '12': 'December'
+            };
+            
+            const year = String(num).slice(0,4);            // from start to 4th position
+            const month = monthMap[String(num).slice(4)];   // from 4 to the end
+            
+            return month + " " + year;
+        },
+
+        currentMonthHeader: function() {
+            const current = this.target.querySelector('#switch_month').dataset.current;
+            this.target.querySelector('#current-month').innerHTML = this.numberToMonth( current );
         },
 
         scrollTop: function() {

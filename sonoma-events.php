@@ -10,7 +10,7 @@
  * Plugin Name: Sonoma Events
  * Plugin URI:  https://www.badabing.nl
  * Description: Sonoma Events grid
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      Badabingbreda
  * Author URI:  https://www.badabing.nl
  * Text Domain: sonoma-events
@@ -34,7 +34,7 @@ if ( defined( 'ABSPATH' ) && ! defined( 'SONOMAEVENTS_VERION' ) ) {
     }
  }
 
-  define( 'SONOMAEVENTS_VERSION'   , '1.0.0' );
+  define( 'SONOMAEVENTS_VERSION'   , '1.0.1' );
   define( 'SONOMAEVENTS_DIR'     , plugin_dir_path( __FILE__ ) );
   define( 'SONOMAEVENTS_FILE'    , __FILE__ );
   define( 'SONOMAEVENTS_URL'     , plugins_url( '/', __FILE__ ) );

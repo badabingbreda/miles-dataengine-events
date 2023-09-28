@@ -208,8 +208,8 @@ class SonEvents {
 
 		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOL
 		<div id="switch_view" data-current="{$atts['view']}">
-		<a class="view" data-view="paged">paged</a>
-		<a class="view" data-view="month">month</a>
+			<a href="#" class="view" data-view="paged">paged</a>
+			<a href="#" class="view" data-view="month">month</a>
 		</div>
 		EOL : '');
 		
@@ -221,20 +221,21 @@ class SonEvents {
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
 					class="sonoma-events-container">
-				<div id="city_tag">
-					{$city_tag_dropdown}
-				</div>
-				<div id="type_tag">
-					{$type_tag_dropdown}
-				</div>
-				{$switch_view}
-				<div id="switch_month" data-current="{$month}">
-					<a class="previous nav-month">previous</a>
-					<a class="next nav-month">next</a>
-				</div>
-				<div id="listing">
-					{$listings}
-				</div>
+					<div id="city_tag">
+						{$city_tag_dropdown}
+					</div>
+					<div id="type_tag">
+						{$type_tag_dropdown}
+					</div>
+					{$switch_view}
+					<div id="switch_month" data-current="{$month}">
+						<span id="current-month"></span>
+						<a href="#" class="previous nav-month">previous</a>
+						<a href="#" class="next nav-month">next</a>
+					</div>
+					<div id="listing">
+						{$listings}
+					</div>
 				</div> 
 				<script>
 					(function($) { 
@@ -332,7 +333,13 @@ class SonEvents {
 
 		return $item;
 	}
-
+	
+	/**
+	 * paged_list_item
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
 	private static function paged_list_item( $event ) {
 
 		$event_time = 'all-day';
@@ -350,17 +357,24 @@ class SonEvents {
 				{$nice_date} {$event_time}
 		</div>
 		EOL;
-		return apply_filters( 'sonoma-events/month/list-item' , $item , $event , self::$settings );
+		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
 
 	}
-
+	
+	/**
+	 * month_list_heading
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
 	private static function month_list_heading( $event ) {
 		$date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'Y-m-d' );
 		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F j, Y' );
 		$weekday = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'l' );
+		
 		$heading = <<<EOL
 			<tr data-date="{$date}">
-				<th>
+				<th colspan="2">
 					{$nice_date} {$weekday}
 				</th>
 			</tr>
@@ -369,7 +383,13 @@ class SonEvents {
 		return apply_filters( 'sonoma-events/month/list-item-heading' , $heading , $event , self::$settings );
 
 	}
-
+	
+	/**
+	 * month_list_item
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
 	private static function month_list_item( $event ) {
 
 		$event_time = 'all-day';
