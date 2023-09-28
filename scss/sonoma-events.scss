@@ -1,0 +1,53 @@
+
+.sonoma-events-container {
+
+    .son-pagination {
+        ul {
+            display: flex;
+            flex-grow: 1;
+            li {
+                list-style: none;
+                padding: 5px;
+                min-width: 20px;
+                min-height: 20px;
+                line-height: 20px;
+                cursor: pointer;
+
+                &:hover {
+                    background-color: #f1f1f1;
+                }
+
+                &.son-active {
+                    font-weight: 700;
+                    text-decoration: underline;
+                    text-decoration-thickness: .2em;
+                    text-underline-offset: 1em;
+                }
+            }
+        }
+    }
+
+    #switch_view {
+        /**/
+    }
+
+    #switch_month {
+        a {
+            &.previous,
+            &.next {
+                cursor: pointer;
+
+                &.disabled {
+                    pointer-events: none;
+                    opacity: .5;
+                }
+            }
+        }
+    }
+
+    &[data-view="paged"] {
+        #switch_month {
+            display: none;
+        }
+    }
+}

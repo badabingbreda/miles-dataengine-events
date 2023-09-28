@@ -1,0 +1,11 @@
+{
+    "settings": "FOR VSCODE SASS/SCSS EXTENSION",
+    "outDir": "../css/",
+    "removeComments": true,
+    "sourceMaps": false,
+    "indentType": "tab",
+    "indentWidth": 1,
+    "linefeed": "crlf",
+    "omitSourceMapUrl": true,
+    "outputStyle": "expanded" 
+}
