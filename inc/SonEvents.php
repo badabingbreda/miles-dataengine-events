@@ -9,7 +9,7 @@ class SonEvents {
 	private static $refresh = false;			// force refresh or not
 	private static $ajax_action = 'sonoma-events';
 	private static $per_page = 30;
-	private static $default_view = 'paged';
+	private static $default_view = 'month';
 
 	private static $settings = [];
 
@@ -73,8 +73,15 @@ class SonEvents {
 		$_month = filter_input( INPUT_GET , '_month' , FILTER_SANITIZE_NUMBER_INT );
 
 
+		// change the view if, on load, either the _page or _month param is detected
+		if( $_page ) {
+			$_view = 'paged';
+		} elseif ($_month ) {
+			$_view = 'month';
+		}
+
 		self::$settings = [
-			'supertag' => $_supertag,
+			'supertag' => $_supertag ? $_supertag : null,
 			'view'	=> $_view ? $_view : self::$default_view,	// use default if not set
 			'city' => $_city,
 			'type' => $_type,
@@ -89,7 +96,7 @@ class SonEvents {
 			self::$settings,
 			$override
 		);
-
+	
 	}
 	
 	/**
@@ -142,11 +149,22 @@ class SonEvents {
 			$events = array_chunk( $events , self::$settings['per_page'] , true );
 			
 		} 
+
 		elseif ( 'month' == self::$settings['view'] ) {
 
 			$_month = self::$settings['month'];
 
+			// events after filtering for month
 			$events = array_filter( $events , function( $event ) use ( $_month ) { return strpos( $event[ 'sort_date' ] , $_month ) === 0; } );
+
+			if ( sizeof($events) == 0 ) {
+
+				// find first event in full $events list with a date larger than our $_month+31 (yyyymm31)
+
+				// reverse $events, find first date smaller than $_month+01 (reverse because otherwise the first item will be returned)
+
+			}
+			
 
 		}
 
@@ -165,7 +183,7 @@ class SonEvents {
 		
 		$atts = shortcode_atts( 
 			[
-				'view'		=> 'paged',
+				'view'		=> self::$default_view,
 				'refresh' 	=> self::$refresh,	// force a transient refresh on each request
 				'supertag' 	=> null,			// show events with this supertag only
 				'id'		=> uniqid( 'son-event-' ),	// create id if needed
@@ -178,9 +196,9 @@ class SonEvents {
 		
 		// get url params for later use, override certain settings with shortcode settings
 		self::get_settings( [ 
-								'view' => $atts[ 'view' ] , 
 								'supertag' => $atts[ 'supertag' ],
 							]);
+
 
 		StyleScript::enqueue();
 		
@@ -213,14 +231,14 @@ class SonEvents {
 		// lets try figuring out how far we can move ahead
 		$last = array_pop($events);
 		
-		if ( 'paged' == $atts[ 'view' ] ) {
+		if ( 'paged' == self::$settings[ 'view' ] ) {
 
 			// filter events with our selections
 			$events = self::event_filter( $events );
 			
 			$listings = self::render_paged_events($events);
 		} 
-		elseif ( 'month' == $atts[ 'view' ] ) {
+		elseif ( 'month' == self::$settings[ 'view' ] ) {
 
 
 			// now filter our events
@@ -234,6 +252,7 @@ class SonEvents {
 		$upperbound = self::reformat( $last[ 'sort_date' ] , 'Ymd' , 'Ym' );
 
 		$month = self::$settings['month'];
+		$view = self::$settings[ 'view' ];
 
 		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOT
 		<div id="switch_view" data-current="{$atts['view']}">
@@ -245,7 +264,7 @@ class SonEvents {
 		return 	<<<EOT
 				<div id="{$atts[ 'id' ]}" 
 					data-supertag="{$atts[ 'supertag' ]}" 
-					data-view="{$atts[ 'view' ]}" 
+					data-view="{$view}" 
 					data-month="{$month}"
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
@@ -367,7 +386,21 @@ class SonEvents {
 	 */
 	private static function render_paged_list_item( $event ) {
 
-		$item = self::paged_list_item( $event );
+		// make sure we use only Year and Month here
+		$year_month = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'Ym' );
+
+		$item = '';
+		// check if last date is different from our event date
+		if ( 
+			self::$last_date !== $year_month && 
+			'paged' == self::$settings[ 'view' ] 
+		) {
+			// add heading
+			$item .= self::paged_list_heading( $event );
+			self::$last_date = $year_month;
+		}
+
+		$item .= self::paged_list_item( $event );
 
 		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
 	}
@@ -399,6 +432,27 @@ class SonEvents {
 		return $item;
 	}
 	
+
+	/**
+	 * paged_list_heading
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
+	private static function paged_list_heading( $event ) {
+		$date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'Y-m' );
+		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F Y' );
+		
+		$heading = <<<EOT
+			<div data-date="{$date}">
+				<h2>{$nice_date}</h2>
+			</div>
+		EOT;
+
+		return apply_filters( 'sonoma-events/paged/list-item-heading' , $heading , $event , self::$settings );
+
+	}
+
 	/**
 	 * paged_list_item
 	 *
@@ -422,6 +476,7 @@ class SonEvents {
 				{$nice_date} {$event_time}
 		</div>
 		EOT;
+
 		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
 
 	}
@@ -749,9 +804,9 @@ class SonEvents {
 		// $format_out = 'Ymd'; // the format you want to end up with
 
 		$date = \DateTime::createFromFormat($format_in, $date_input );
-
 		return $date->format( $format_out );		
 	}
+	
 		
 	/**
 	 * to_pm

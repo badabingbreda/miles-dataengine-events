@@ -72,7 +72,7 @@
             );
 
             // keyword search
-            this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
+            if (this.keyword ) this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
 
             // pagination
             this.target.addEventListener( 'click' , this.pagination.bind( _this ) );
@@ -148,6 +148,7 @@
 
         renderListingContent: function( html ) {
             if ( html.trim() == '') {
+                this.triggerHook( 'listingNoResults' , this.view );
                 if ( 'month' == this.view ) {
                     let temp = this.target.querySelector( '#month-no-results' );
                     this.listing.innerHTML = temp.innerHTML;
