@@ -10,6 +10,7 @@
         settings        : {},
         source          : null,
         target          : null,
+        timeOut         : null,
 
         _init: function() {
 
@@ -20,8 +21,16 @@
 
             this.target = document.querySelector( '#' + this.settings.id );
 
+            this.listing = this.target.querySelector( '#listing' );
+
             this.previous = this.target.querySelector( '#switch_month a.previous' );
             this.next = this.target.querySelector( '#switch_month a.next' );
+
+            this.citytag = this.target.querySelectorAll( '#city_tag input' );
+            this.typetag = this.target.querySelectorAll( '#type_tag input' );
+
+            this.keyword = this.target.querySelector( '#keyword input' );
+            this.resetfilters = this.target.querySelector( '#reset_filters button' );
 
             this.source = SONOMAEVENTS.admin_ajax + '?action=sonoma-events';
             this.view = this.target.dataset.view;
@@ -35,7 +44,12 @@
 
             this.addHook( 'afterPagination' , this.scrollTop );
             this.addHook( 'afterInit' , this.currentMonthHeader.bind( this ) );
-            this.addHook( 'afterUpdate' , this.currentMonthHeader.bind( this ) );
+            this.addHook( 'afterInit' , this.handleEmptyListings.bind( this ) );
+            this.addHook( 'beforeCollect' , this.currentMonthHeader.bind( this ) );
+
+            // add and remove updating class
+            this.addHook( 'beforeCollect' , this.addUpdatingClass.bind( this ) );
+            this.addHook( 'afterUpdate' , this.removeUpdatingClass.bind( this ) );
 
             this.triggerHook( 'afterInit' );
 
@@ -43,15 +57,46 @@
 
         addListeners: function() {
 
-            this.target.querySelector( '#city_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
-            this.target.querySelector( '#type_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
+            
+            const _this = this;
+            
+            // this.target.querySelector( '#city_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
+            // this.target.querySelector( '#type_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
+
+            this.target.querySelectorAll( '#city_tag input' ).forEach( elem =>
+                elem.addEventListener( 'click' , _this.collectTimed.bind( _this ) )
+            );
+
+            this.target.querySelectorAll( '#type_tag input' ).forEach( elem =>
+                elem.addEventListener( 'click' , this.collectTimed.bind( _this ) )
+            );
+
+            // keyword search
+            this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
 
             // pagination
-            this.target.addEventListener( 'click' , this.pagination.bind( this ) );
+            this.target.addEventListener( 'click' , this.pagination.bind( _this ) );
             // change months
-            this.target.addEventListener( 'click' , this.changeMonth.bind( this ) );
+            this.target.addEventListener( 'click' , this.changeMonth.bind( _this ) );
             // switch view
-            this.target.addEventListener( 'click' , this.switchView.bind( this ) );
+            this.target.addEventListener( 'click' , this.switchView.bind( _this ) );
+
+            if ( this.resetfilters ) this.resetfilters.addEventListener( 'click' , this.resetFilters.bind( _this ) );
+
+        },
+
+        /**
+         * use a timed collect so that we can click multiselect without too many requests
+         * 
+         * @param {*} event 
+         * @param {*} page 
+         */
+        collectTimed: function( event , page ) {
+            clearTimeout( this.timeOut );
+            this.triggerHook( 'beforeCollect' );
+            this.timeOut = setTimeout( function() {
+                this.collect( event , page );
+            }.bind(this), 500 );
 
         },
 
@@ -61,8 +106,10 @@
         collect: function( event, page ) {
 
             let params = { 
-                _city : this.target.querySelector( '#city_tag select' ).value,
-                _type : this.target.querySelector( '#type_tag select' ).value,
+                _city : this.multiValue( '_city').join(','),//this.target.querySelector( '#city_tag select' ).value,
+                _type : this.multiValue( '_type').join(',')//this.target.querySelector( '#type_tag select' ).value,
+                // _city : this.target.querySelector( '#city_tag select' ).value,
+                // _type : this.target.querySelector( '#type_tag select' ).value,
             };
 
             if ( 'paged' == this.view ) {
@@ -70,32 +117,77 @@
             } else if ( 'month' == this.view ) {
                 params = { ...params , ...{ _month : this.month } };
             }
-            
+
+            if ( this.keyword.value ) {
+                params = { ...params , ...{ _keyword : this.keyword.value } };
+            }
 
             // add this due to async nature of the class
             var _this = this;
 
             _this.triggerHook( 'beforeUpdate' );
-
             $.ajax( {
                 url: this.source + '&_view=' + _this.view + '&' + '&_supertag=' + _this.target.dataset.supertag + '&' + new URLSearchParams(params).toString(),
                 method: 'GET',
                 dataType: 'html',
             } ).done( function( html ) {
-                _this.target.querySelector( '#listing' ).innerHTML = html;
+                _this.renderListingContent( html );
                 _this.updatePushURL(params);
                 _this.triggerHook( 'afterUpdate' );
             });
+            
+        },
 
+        addUpdatingClass: function() {
+            this.target.classList.add( 'updating' );
+        },
+        
+        removeUpdatingClass: function() {
+            this.target.classList.remove( 'updating' );
+        },
 
+        renderListingContent: function( html ) {
+            if ( html.trim() == '') {
+                if ( 'month' == this.view ) {
+                    let temp = this.target.querySelector( '#month-no-results' );
+                    this.listing.innerHTML = temp.innerHTML;
+                }
+                else if ( 'paged' == this.view ) {
+                    let temp = this.target.querySelector( '#paged-no-results' );
+                    this.listing.innerHTML = temp.innerHTML;
+                }
+            } else {
+                this.listing.innerHTML = html;
+            }
+        },
+
+        handleEmptyListings: function() {
+            this.renderListingContent( this.listing.innerHTML );
+        },
+
+        resetFilters: function() {
+            this.keyword.value = '';
+            this.citytag.forEach( elem => elem.checked = false );
+            this.typetag.forEach( elem => elem.checked = false );
+            this.collectTimed( null );
+        },
+
+        /**
+         * get the values of multicheckboxes
+         * @param {*} param 
+         */
+        multiValue: function( param ) {
+            values = [];
+            const nodes = this.target.querySelectorAll( `input[name="${param}[]"]:checked`);
+            nodes.forEach( elem => values.push(elem.value) );
+            return values;
         },
 
         pagination: function( event ) {
 
-            
             if (event.target.classList.contains( 'son-page' ) ) {
                 event.preventDefault();
-                this.collect( null, event.target.dataset.page );
+                this.collectTimed( null, event.target.dataset.page );
                 this.triggerHook( 'afterPagination' );
             }
 
@@ -111,21 +203,19 @@
                 this.target.querySelector( '#switch_month' ).dataset.current = event.target.dataset.month;
                 // reset the month navigation because it has changed
                 this.setMonthNavigation();
-
-                this.collect();
-
+                this.collectTimed();
             }
 
         },
 
         switchView: function (event) {
 
-            if (event.target.classList.contains( 'view' ) ) {
+            if (event.target.classList.contains( 'switch-view' ) ) {
                 event.preventDefault();
                 this.view = event.target.dataset.view;
                 this.target.dataset.view = this.view;
                 this.setMonthNavigation();
-                this.collect();
+                this.collectTimed();
             }
 
         },
@@ -158,8 +248,6 @@
             const previous = this.addMonths( date , -1 ),
                     next = this.addMonths( date, 1 );
 
-            console.log( previous , next );
-            
             this.previous.dataset.month = `${this.dateFormated(previous)}`;
             this.next.dataset.month = `${this.dateFormated(next)}`;
 

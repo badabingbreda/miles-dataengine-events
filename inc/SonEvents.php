@@ -6,7 +6,7 @@ use SonomaEvents\Helpers\StyleScript;
 class SonEvents {
 	
 	private static $expiration = 60 * 60;	// an hour
-	private static $refresh = true;			// force refresh or not
+	private static $refresh = false;			// force refresh or not
 	private static $ajax_action = 'sonoma-events';
 	private static $per_page = 30;
 	private static $default_view = 'paged';
@@ -68,6 +68,7 @@ class SonEvents {
 		$_view = filter_input( INPUT_GET , '_view' );
 		$_city = filter_input( INPUT_GET , '_city' );
 		$_type = filter_input( INPUT_GET , '_type' );
+		$_keyword = filter_input( INPUT_GET , '_keyword' );
 		$_page = filter_input( INPUT_GET , '_page' , FILTER_SANITIZE_NUMBER_INT );
 		$_month = filter_input( INPUT_GET , '_month' , FILTER_SANITIZE_NUMBER_INT );
 
@@ -77,6 +78,7 @@ class SonEvents {
 			'view'	=> $_view ? $_view : self::$default_view,	// use default if not set
 			'city' => $_city,
 			'type' => $_type,
+			'keyword' => $_keyword ? strtolower( $_keyword ) : null,
 			'page' => ($_page > 0 ? $_page : 1),				// use 1 if not set or zero
 			'month' => $_month ? $_month : date( 'Ym' ),		// use current month if not set
 			'per_page' => self::$per_page,
@@ -99,17 +101,39 @@ class SonEvents {
 	private static function event_filter( $events ) {
 
 
-		$_city = self::$settings['city'];
-		$_type = self::$settings['type'];
+		$_city = self::$settings['city'] ? explode(',',self::$settings['city']) : [];
+		$_type = self::$settings['type'] ? explode(',',self::$settings['type']) : [];
+		$keyword = self::$settings[ 'keyword' ];
 
 		// filter if city is set
-		if ($_city) {
-			$events = array_filter( $events , function( $event ) use ($_city) { return in_array( $_city , $event[ 'city_tag' ]); } );
+		if (sizeof($_city)>0) {
+			$events = array_filter( 
+				$events , 
+				function( $event ) use ($_city) { 
+					return sizeof(array_intersect( $_city , array_map('sanitize_title' , $event[ 'city_tag' ] ) )) > 0; 
+				}
+			);
 		}
 
 		// filter (even more) if type is set
-		if ($_type) {
-			$events = array_filter( $events , function( $event ) use ($_type) { return in_array( $_type , $event[ 'type' ]); } );
+		if (sizeof($_type)>0) {
+			$events = array_filter( 
+				$events , 
+				function( $event ) use ($_type) { 
+					return sizeof(array_intersect( $_type , array_map( 'sanitize_title' , $event[ 'type' ] ) )) > 0; 
+				}
+			);
+		}
+
+		if ( $keyword ) {
+			$events = array_filter(
+				$events,
+				function( $event ) use ( $keyword ) {
+					// note that we return the inverse of the test if keyword wasn't found. 
+					// because, of course, if it IS false (not found) the test returns TRUE, and we need the opposite
+					return !( strpos( $event[ 'keywordsearch' ] , $keyword ) === false );
+				}
+			);
 		}
 
 		if ( 'paged' == self::$settings['view'] ) {
@@ -178,8 +202,13 @@ class SonEvents {
 		$city_tag = self::clean_array( $city_tag );
 		$type_tag = self::clean_array( $type_tag );
 		
-		$city_tag_dropdown = self::dropdown( $city_tag , '_city' , 'City' );
-		$type_tag_dropdown = self::dropdown( $type_tag , '_type' , 'Event Type' );
+		// $city_tag_control = self::dropdown( $city_tag , '_city' , 'City' );
+		// $type_tag_control = self::dropdown( $type_tag , '_type' , 'Event Type' );
+
+		$city_tag_control = self::multiselect( $city_tag , '_city' , 'City' );
+		$type_tag_control = self::multiselect( $type_tag , '_type' , 'Event Type' );
+
+		$keyword = self::keywordinput();
 		
 		// lets try figuring out how far we can move ahead
 		$last = array_pop($events);
@@ -206,14 +235,14 @@ class SonEvents {
 
 		$month = self::$settings['month'];
 
-		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOL
+		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOT
 		<div id="switch_view" data-current="{$atts['view']}">
-			<a href="#" class="view" data-view="paged">paged</a>
-			<a href="#" class="view" data-view="month">month</a>
+			<a href="#" class="switch-view switch-view-paged" data-view="paged">paged</a>
+			<a href="#" class="switch-view switch-view-month" data-view="month">month</a>
 		</div>
-		EOL : '');
+		EOT : '');
 		
-		return 	<<<EOL
+		return 	<<<EOT
 				<div id="{$atts[ 'id' ]}" 
 					data-supertag="{$atts[ 'supertag' ]}" 
 					data-view="{$atts[ 'view' ]}" 
@@ -221,21 +250,49 @@ class SonEvents {
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
 					class="sonoma-events-container">
-					<div id="city_tag">
-						{$city_tag_dropdown}
-					</div>
-					<div id="type_tag">
-						{$type_tag_dropdown}
+					<div id="event-filters">
+						<div id="filter_list">
+						</div>
+						<div id="keyword">
+							{$keyword}
+						</div>
+						<p>Filter By:</p>
+						<div id="city_tag">
+							<button class="facet-toggle"> <h4 class="facet-title">City</h4><span class="facet-toggle-sign">+</span> </button>
+							<fieldset>
+								<legend class="sr-only">City</legend>
+								{$city_tag_control}
+							</fieldset>
+						</div>
+						<div id="type_tag">
+							<button class="facet-toggle"> <h4 class="facet-title">Type</h4><span class="facet-toggle-sign">+</span> </button>
+							<fieldset>
+								<legend class="sr-only">City</legend>
+								{$type_tag_control}
+							</fieldset>
+						</div>
 					</div>
 					{$switch_view}
 					<div id="switch_month" data-current="{$month}">
 						<span id="current-month"></span>
-						<a href="#" class="previous nav-month">previous</a>
-						<a href="#" class="next nav-month">next</a>
+						<span class="loading">loading data</span>
+						<nav aria-label="Calendar Month Navigation">
+							<a href="#" class="previous nav-month"><span class="sr-only">Previous Month</span></a>
+							<a href="#" class="next nav-month"><span class="sr-only">Next Month</span></a>
+						</nav>
 					</div>
 					<div id="listing">
 						{$listings}
 					</div>
+					<template id="month-no-results">
+						<h2>Sadly there are no results for this month</h2>
+						<p>This may be because of your filters, or simply because there are no events planned yet</p>
+						<p>You can <a href="#" class="switch-view" data-view="paged">switch to paged view</a> and try to find what you're looking for.</p>
+					</template>
+					<template id="paged-no-results">
+						<h2>Sadly there are no results for your filter settings</h2>
+						<p>Try deselecting filters to get more results.</p>
+					</template>
 				</div> 
 				<script>
 					(function($) { 
@@ -244,8 +301,7 @@ class SonEvents {
 						});
 					})(jQuery);
 				</script>
-		EOL;
-
+		EOT;
 	}
 	
 	/**
@@ -264,8 +320,12 @@ class SonEvents {
 		}
 		// render the chunck of events
 		$listings = implode( '', $event_list );
-		// add the pagination after
-		$listings .= self::pagination( $events , self::$settings['page'] );
+
+		if ( $listings ) {
+			
+			// add the pagination after
+			$listings .= self::pagination( $events , self::$settings['page'] );
+		}
 
 		return $listings;
 
@@ -289,9 +349,14 @@ class SonEvents {
 		// render the chunck of events
 		$listings = implode('', $event_list);
 
-		return "<table>". 
-				$listings.
-				"</table>";
+		if (!$listings) {
+			return '';
+		} else {
+			return "<table>". 
+					$listings.
+					"</table>";
+		}
+		
 	}
 
 	/**
@@ -351,12 +416,12 @@ class SonEvents {
 		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F j, Y' );
 
 
-		$item = <<<EOL
+		$item = <<<EOT
 		<div>
-				<h4><a href="{$event['permalink']}\">{$event['post_title']}</a></h4>
+				<h4><a href="{$event['permalink']}">{$event['post_title']}</a></h4>
 				{$nice_date} {$event_time}
 		</div>
-		EOL;
+		EOT;
 		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
 
 	}
@@ -372,13 +437,13 @@ class SonEvents {
 		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F j, Y' );
 		$weekday = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'l' );
 		
-		$heading = <<<EOL
+		$heading = <<<EOT
 			<tr data-date="{$date}">
 				<th colspan="2">
 					{$nice_date} {$weekday}
 				</th>
 			</tr>
-		EOL;
+		EOT;
 
 		return apply_filters( 'sonoma-events/month/list-item-heading' , $heading , $event , self::$settings );
 
@@ -392,22 +457,22 @@ class SonEvents {
 	 */
 	private static function month_list_item( $event ) {
 
-		$event_time = 'all-day';
+		$event_time = 'See Details';
 
 		if ($event[ 'start_time_pm' ] && $event[ 'end_time_pm' ] ) {
 			$event_time = $event[ 'start_time_pm' ] . ' - ' . $event[ 'end_time_pm' ];
 		}
 
-		$item = <<<EOL
+		$item = <<<EOT
 		<tr>
 			<td class="list-event-time">
 				{$event_time}
 			</td>
 			<td class="list-event-title">
-				<a href="{$event['permalink']}\">{$event['post_title']}</a>
+				<a href="{$event['permalink']}"><h2 class="event-title">{$event['post_title']}</h2><small class="event-city">{$event['city']}, {$event['state']}</small></a>
 			</td>
 		</tr>
-		EOL;
+		EOT;
 		return apply_filters( 'sonoma-events/month/list-item' , $item , $event , self::$settings );
 
 	}
@@ -468,6 +533,34 @@ class SonEvents {
 		}
 		$dropdown .= "<select>";
 		return $dropdown;
+	}
+
+	private static function multiselect( $values , $param , $placeholder = '' ) {
+
+		$param_values = filter_input( INPUT_GET , $param );
+
+		$param_values = $param_values ? explode( ',' , $param_values ) : [];
+
+		$options = '<div>';
+		foreach( $values as $value ) {
+			$slug = \sanitize_title( $value );
+			$checked = checked( true , in_array( $slug , $param_values ) , false );
+			$options .= <<<EOT
+				<div>
+					<input type="checkbox" name="{$param}[]" id="{$param}-{$slug}" value="{$slug}" $checked/>
+					<label for="{$param}-{$slug}">{$value}</label>
+				</div>
+				EOT;
+		}
+		$options .= '</div>';
+		return $options;
+	}
+
+	private static function keywordinput() {
+		$value = self::$settings[ 'keyword' ];
+		return <<<EOT
+			<input type="text" value="{$value}" placeholder="Search" />
+		EOT;
 	}
 		
 	/**
@@ -596,6 +689,7 @@ class SonEvents {
 						'end_time_pm' => 	$instance[ 'end_time' ] ? self::to_pm( $instance[ 'end_time' ]) : '',				// time already converted to AM/PM
 						'sort_date' => 		(string)self::reformat($instance[ 'event_date' ]),									// date formatted for easier sorting
 						'sort_date_time' => $sort_date_time,									// date formatted for easier sorting
+						'keywordsearch' =>	strtolower(\get_the_title( $post_id ) . ' ' . self::descriptions( $post_id ) . ' ' . \get_field( 'venue_name' , $post_id )),
 					],
 					$instance
 				);
@@ -603,6 +697,19 @@ class SonEvents {
 		
 		return $return;
 	}
+
+	private static function descriptions( $post_id ) {
+		// get descriptions repeater field
+		$descriptions = \get_field( 'descriptions' , $post_id );
+
+		// flatten the descriptions
+		$descriptions = array_map( function( $row ) { return $row[ 'description' ]; } , $descriptions );
+		// strip all tags because we don't need those here
+		$descriptions = array_map( 'wp_strip_all_tags' , $descriptions );
+		// return concatenated descriptions
+		return implode( ' ' , $descriptions );
+	}
+
 
 	/**
 	 * get the value or - when it's an array - the first value because we don't like arrays

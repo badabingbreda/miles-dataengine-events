@@ -1,6 +1,14 @@
 
 .sonoma-events-container {
 
+    .loading {
+        display: none;
+    }
+
+    &.updating .loading {
+        display: inline-block;
+    }
+
     .son-pagination {
         ul {
             display: flex;

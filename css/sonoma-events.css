@@ -1,3 +1,9 @@
+.sonoma-events-container .loading {
+	display: none;
+}
+.sonoma-events-container.updating .loading {
+	display: inline-block;
+}
 .sonoma-events-container .son-pagination ul {
 	display: flex;
 	flex-grow: 1;
