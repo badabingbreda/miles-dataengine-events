@@ -256,10 +256,20 @@ class SonEvents {
 
 		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOT
 		<div id="switch_view" data-current="{$atts['view']}">
-			<a href="#" class="switch-view switch-view-paged" data-view="paged">paged</a>
-			<a href="#" class="switch-view switch-view-month" data-view="month">month</a>
+			<a href="#" class="switch-view switch-view-paged" data-view="paged">List View</a>
+			<a href="#" class="switch-view switch-view-month" data-view="month">Month List</a>
 		</div>
 		EOT : '');
+
+		$type_tag_control = ( $atts[ 'supertag' ] !== '' ? <<<EOT
+			<div id="type_tag" class="event-facet">
+				<button class="facet-toggle"> <h4 class="facet-title">Type</h4><span class="facet-toggle-sign">+</span> </button>
+				<fieldset>
+					<legend class="sr-only">City</legend>
+					{$type_tag_control}
+				</fieldset>
+			</div>
+		EOT : '' );
 		
 		return 	<<<EOT
 				<div id="{$atts[ 'id' ]}" 
@@ -269,48 +279,48 @@ class SonEvents {
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
 					class="sonoma-events-container">
-					<div id="event-filters">
+					<div id="filter-sidebar" class="event-filters">
 						<div id="filter_list">
 						</div>
-						<div id="keyword">
-							{$keyword}
-						</div>
 						<p>Filter By:</p>
-						<div id="city_tag">
+						<div id="city_tag" class="event-facet">
 							<button class="facet-toggle"> <h4 class="facet-title">City</h4><span class="facet-toggle-sign">+</span> </button>
 							<fieldset>
 								<legend class="sr-only">City</legend>
 								{$city_tag_control}
 							</fieldset>
 						</div>
-						<div id="type_tag">
-							<button class="facet-toggle"> <h4 class="facet-title">Type</h4><span class="facet-toggle-sign">+</span> </button>
-							<fieldset>
-								<legend class="sr-only">City</legend>
-								{$type_tag_control}
-							</fieldset>
+						{$type_tag_control}
+						<div id="keyword">
+							{$keyword}
 						</div>
 					</div>
-					{$switch_view}
-					<div id="switch_month" data-current="{$month}">
-						<span id="current-month"></span>
-						<span class="loading">loading data</span>
-						<nav aria-label="Calendar Month Navigation">
+					<div id="events-list-header">
+						<h2 class="events-list-heading" id="current-month"></h2>
+						<h2 class="events-list-heading" id="list-view-title">All Events</h2>
+						<!-- <span class="loading">loading data</span> -->
+						<nav id="switch_month" data-current="{$month}" aria-label="Calendar Month Navigation">
 							<a href="#" class="previous nav-month"><span class="sr-only">Previous Month</span></a>
 							<a href="#" class="next nav-month"><span class="sr-only">Next Month</span></a>
 						</nav>
+						{$switch_view}
 					</div>
 					<div id="listing">
 						{$listings}
 					</div>
 					<template id="month-no-results">
-						<h2>Sadly there are no results for this month</h2>
-						<p>This may be because of your filters, or simply because there are no events planned yet</p>
-						<p>You can <a href="#" class="switch-view" data-view="paged">switch to paged view</a> and try to find what you're looking for.</p>
+						<h2>Sorry, there are no results matching your search criteria for this month</h2>
+						<p>Please try another search to find what you're looking for.</p>
 					</template>
 					<template id="paged-no-results">
-						<h2>Sadly there are no results for your filter settings</h2>
-						<p>Try deselecting filters to get more results.</p>
+						<h2>Sorry, there are no results matching your search criteria</h2>
+						<p>Please try another search to find what you're looking for.</p>
+					</template>
+					<template id="filter_list_item">
+						<a class="filter-list-item-remove" 
+							data-value="{{value}}"
+							data-type="{{type}}"
+							style="background-color:red;color:white;padding: 5px 8px;">{{label}}</a>
 					</template>
 				</div> 
 				<script>
@@ -334,7 +344,17 @@ class SonEvents {
 		// use an array to build listing
 		$event_list = [];
 
-		foreach ($events[ (self::$settings['page'] - 1) ] as $event ) {
+		// no need to return anything if on first request there are no events
+		if ( sizeof( $events ) == 0 ) return '';
+
+		// page to get
+		$page = self::$settings['page'];
+
+		// make sure we don't do a call to a page that doesn't exist
+		// fall back to page 1 if does not exist (any more)
+		if ( sizeof( $events ) < self::$settings['page'] ) $page = 1;
+
+		foreach ($events[ $page - 1 ] as $event ) {
 			$event_list[] = self::render_paged_list_item( $event );
 		}
 		// render the chunck of events
@@ -343,7 +363,7 @@ class SonEvents {
 		if ( $listings ) {
 			
 			// add the pagination after
-			$listings .= self::pagination( $events , self::$settings['page'] );
+			$listings .= self::pagination( $events , $page );
 		}
 
 		return $listings;
@@ -444,8 +464,8 @@ class SonEvents {
 		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F Y' );
 		
 		$heading = <<<EOT
-			<div data-date="{$date}">
-				<h2>{$nice_date}</h2>
+			<div data-date="{$date}" class="list-month-divider">
+				<span>{$nice_date}</span>
 			</div>
 		EOT;
 
@@ -461,7 +481,7 @@ class SonEvents {
 	 */
 	private static function paged_list_item( $event ) {
 
-		$event_time = 'all-day';
+		$event_time = '';
 
 		if ($event[ 'start_time_pm' ] && $event[ 'end_time_pm' ] ) {
 			$event_time = $event[ 'start_time_pm' ] . ' - ' . $event[ 'end_time_pm' ];
@@ -471,9 +491,12 @@ class SonEvents {
 
 
 		$item = <<<EOT
-		<div>
-				<h4><a href="{$event['permalink']}">{$event['post_title']}</a></h4>
-				{$nice_date} {$event_time}
+		<div class="event-list-details">
+				<div class="event-list-date-time">{$nice_date}<br>{$event_time}</div>
+				<a class="event-list-info" href="{$event['permalink']}">
+					<h3 class="event-title">{$event['post_title']}</h3>
+					<small class="event-city">{$event['city']}, {$event['state']}</small>
+				</a>
 		</div>
 		EOT;
 
@@ -495,7 +518,7 @@ class SonEvents {
 		$heading = <<<EOT
 			<tr data-date="{$date}">
 				<th colspan="2">
-					{$nice_date} {$weekday}
+					<span class="month-day-date">{$nice_date}</span> <span class="weekday">{$weekday}</span>
 				</th>
 			</tr>
 		EOT;
@@ -524,7 +547,7 @@ class SonEvents {
 				{$event_time}
 			</td>
 			<td class="list-event-title">
-				<a href="{$event['permalink']}"><h2 class="event-title">{$event['post_title']}</h2><small class="event-city">{$event['city']}, {$event['state']}</small></a>
+				<a href="{$event['permalink']}"><h3 class="event-title">{$event['post_title']}</h3><small class="event-city">{$event['city']}, {$event['state']}</small></a>
 			</td>
 		</tr>
 		EOT;
@@ -544,23 +567,23 @@ class SonEvents {
 	 */
 	private static function pagination( $all_events , $current ) {
 
-		$return = 	'<div class="son-pagination">'.
+		$return = 	'<div class="event-pagination">'.
 					'<ul>';
 
-		$radius = 5;
+		$radius = 3;
 		$total = sizeof( $all_events );
 
 		for($i = 1; $i <= $total; $i++){
 		  if(($i >= 1 && $i <= $radius) || ($i > $current - $radius && $i < $current + $radius) || ($i <= $total && $i > $total - $radius)){
 			if($i == $current) {
-				$return .= '<li class="son-page son-active" data-page="'.( $i ).'">'. ($i) .'</li>';
+				$return .= '<li class="event-page current-page" aria-current="true" data-page="'.( $i ).'">'. ($i) .'</li>';
 			} else {
-				$return .= '<li class="son-page" data-page="'.( $i ).'">'. ($i) .'</li>';
+				$return .= '<li class="event-page" data-page="'.( $i ).'">'. ($i) .'</li>';
 
 			}
 		  }
 		  elseif($i == $current - $radius || $i == $current + $radius) {
-			$return .= "<li>...</li>";
+			$return .= '<li class="pagination-ellipsis">...</li>';
 		  }
 		}
 
@@ -796,7 +819,7 @@ class SonEvents {
 	 */
 	protected static function reformat( $date_input , $format_in = 'd/m/Y' , $format_out = 'Ymd' ) {
 		/*
-		*  Create PHP DateTime object from Date Piker Value
+		*  Create PHP DateTime object from Date Picker Value
 		*  this example expects the value to be saved in the format: yymmdd (JS) = Ymd (PHP)
 		*/
 
@@ -816,8 +839,10 @@ class SonEvents {
 	 */
 	protected static function to_pm( $time ) {
 		$currentDateTime = $time;
-		$newDateTime = date('h:i A', strtotime($currentDateTime));
 		
+		$newDateTime = date('g:iA', strtotime($currentDateTime));
+		$newDateTime = strtolower($newDateTime);
+				
 		return $newDateTime;
 	}
 

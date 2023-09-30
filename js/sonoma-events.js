@@ -11,6 +11,7 @@
         source          : null,
         target          : null,
         timeOut         : null,
+        updateDelay     : 500,
 
         _init: function() {
 
@@ -21,6 +22,9 @@
 
             this.target = document.querySelector( '#' + this.settings.id );
 
+            this.supertag = this.target.dataset.supertag;
+
+            this.filter_list = this.target.querySelector( '#filter_list' );
             this.listing = this.target.querySelector( '#listing' );
 
             this.previous = this.target.querySelector( '#switch_month a.previous' );
@@ -39,16 +43,19 @@
             this.settings.lowerbound = this.target.dataset?.lowerbound || null;
 
             this.setMonthNavigation();
+				
+			this.toggleFacetOptions();
 
             this.addListeners();
 
             this.addHook( 'afterPagination' , this.scrollTop );
             this.addHook( 'afterInit' , this.currentMonthHeader.bind( this ) );
             this.addHook( 'afterInit' , this.handleEmptyListings.bind( this ) );
+            this.addHook( 'afterInit' , this.filterTagsUpdate.bind( this ) );
             this.addHook( 'beforeCollect' , this.currentMonthHeader.bind( this ) );
 
             // add and remove updating class
-            this.addHook( 'beforeCollect' , this.addUpdatingClass.bind( this ) );
+            this.addHook( 'beforeUpdate' , this.addUpdatingClass.bind( this ) );
             this.addHook( 'afterUpdate' , this.removeUpdatingClass.bind( this ) );
 
             this.triggerHook( 'afterInit' );
@@ -59,20 +66,20 @@
 
             
             const _this = this;
-            
-            // this.target.querySelector( '#city_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
-            // this.target.querySelector( '#type_tag select' ).addEventListener( 'change' , this.collect.bind( this ) );
 
-            this.target.querySelectorAll( '#city_tag input' ).forEach( elem =>
-                elem.addEventListener( 'click' , _this.collectTimed.bind( _this ) )
-            );
+            // this.target.querySelectorAll( '#city_tag input' ).forEach( elem =>
+            //     elem.addEventListener( 'click' , _this.collectTimed.bind( _this ) )
+            // );
+            $('#city_tag input').on("click", () => this.handleTagClicked());
 
-            this.target.querySelectorAll( '#type_tag input' ).forEach( elem =>
-                elem.addEventListener( 'click' , this.collectTimed.bind( _this ) )
-            );
+            // this.target.querySelectorAll( '#type_tag input' ).forEach( elem =>
+            //     elem.addEventListener( 'click' , this.collectTimed.bind( _this ) )
+            // );
+			$('#type_tag input').on("click", () => this.handleTagClicked());
 
             // keyword search
-            if (this.keyword ) this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
+            //if (this.keyword ) this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
+            $(this.keyword).on("input", () => this.collectTimed());
 
             // pagination
             this.target.addEventListener( 'click' , this.pagination.bind( _this ) );
@@ -80,6 +87,10 @@
             this.target.addEventListener( 'click' , this.changeMonth.bind( _this ) );
             // switch view
             this.target.addEventListener( 'click' , this.switchView.bind( _this ) );
+
+            // switch view
+            this.target.addEventListener( 'click' , this.handleRemoveFilterTagClick.bind( _this ) );
+
 
             if ( this.resetfilters ) this.resetfilters.addEventListener( 'click' , this.resetFilters.bind( _this ) );
 
@@ -94,9 +105,18 @@
         collectTimed: function( event , page ) {
             clearTimeout( this.timeOut );
             this.triggerHook( 'beforeCollect' );
-            this.timeOut = setTimeout( function() {
-                this.collect( event , page );
-            }.bind(this), 500 );
+			
+			// Check if filters are applied
+            if (this.multiValue('_city').length > 0 || 
+                this.multiValue('_type').length > 0 || 
+                (this.keyword && this.keyword.value.length > 0)) {
+                this.view = 'paged';  // Switch view to 'paged' if any filter is applied
+            }
+			
+			
+            this.timeOut = setTimeout(() => {
+                this.collect(event, page);
+            }, this.updateDelay );
 
         },
 
@@ -104,10 +124,17 @@
          * Collect the settings before doing an ajax request
          */
         collect: function( event, page ) {
+			
+			// Switch to paged view if any of the filters are used
+			if (this.multiValue('_city').length > 0 || this.multiValue('_type').length > 0 || this.keyword.value) {
+				this.view = "paged";
+				this.target.dataset.view = this.view;
+// 				this.setMonthNavigation();  // If needed
+			}
 
             let params = { 
-                _city : this.multiValue( '_city').join(','),//this.target.querySelector( '#city_tag select' ).value,
-                _type : this.multiValue( '_type').join(',')//this.target.querySelector( '#type_tag select' ).value,
+                _city : this.multiValue( '_city').join(','),
+                _type : this.multiValue( '_type').join(','),
                 // _city : this.target.querySelector( '#city_tag select' ).value,
                 // _type : this.target.querySelector( '#type_tag select' ).value,
             };
@@ -117,6 +144,8 @@
             } else if ( 'month' == this.view ) {
                 params = { ...params , ...{ _month : this.month } };
             }
+
+
 
             if ( this.keyword.value ) {
                 params = { ...params , ...{ _keyword : this.keyword.value } };
@@ -136,6 +165,80 @@
                 _this.triggerHook( 'afterUpdate' );
             });
             
+        },
+
+        createElement: function( str , type, value , label ) {
+            var frag = document.createDocumentFragment();
+        
+            var elem = document.createElement('div');
+
+            str = str.replaceAll( /\{\{value\}\}/gi , value );
+            str = str.replaceAll( /\{\{label\}\}/gi , label );
+            str = str.replaceAll( /\{\{type\}\}/gi , type );
+
+            elem.innerHTML = str;
+        
+            while (elem.childNodes[0]) {
+                frag.appendChild(elem.childNodes[0]);
+            }
+            return frag;
+        } ,       
+
+        handleTagClicked: function( event ) {
+            this.filterTagsUpdate();
+            this.collectTimed( event );
+        },
+
+        handleRemoveFilterTagClick: function( event ) {
+            if (event.target.classList.contains( 'filter-list-item-remove' ) ) {
+                event.preventDefault();
+                // get the type
+                let type = event.target.dataset.type;
+
+                // disable the item in the list
+                this[type + 'tag'].forEach( 
+                    elem => { 
+                        if ( elem.value == event.target.dataset.value ) elem.checked = false; } 
+                );
+                // re-update the tags
+                this.filterTagsUpdate();
+                this.collectTimed();
+
+            }
+        },     
+
+        filterTagsUpdate: function() {
+            const list_item_template = this.target.querySelector( 'template#filter_list_item' ).innerHTML;
+            
+            if ( this.filter_list ) {
+                
+                this.filter_list.innerHTML = '';
+                
+                // this.
+                // collect tags and bring to tag_list
+                var nodes = this.target.querySelectorAll( `input[name="_city[]"]:checked`);
+                nodes.forEach( elem => {
+                    var currentLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
+                        currentValue = elem.value;                  
+
+                    var newTag = this.createElement( list_item_template , 'city', currentValue , currentLabel );
+
+                    this.filter_list.appendChild( newTag );  
+                } );
+
+                // collect tags and bring to tag_list
+                var nodes = this.target.querySelectorAll( `input[name="_type[]"]:checked`);
+                nodes.forEach( elem => {
+                    var currentLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
+                        currentValue = elem.value;                  
+
+                    var newTag = this.createElement( list_item_template , 'type', currentValue , currentLabel );
+
+                    this.filter_list.appendChild( newTag );  
+                } );
+
+            }
+
         },
 
         addUpdatingClass: function() {
@@ -186,7 +289,7 @@
 
         pagination: function( event ) {
 
-            if (event.target.classList.contains( 'son-page' ) ) {
+            if (event.target.classList.contains( 'event-page' ) ) {
                 event.preventDefault();
                 this.collectTimed( null, event.target.dataset.page );
                 this.triggerHook( 'afterPagination' );
@@ -215,6 +318,13 @@
                 event.preventDefault();
                 this.view = event.target.dataset.view;
                 this.target.dataset.view = this.view;
+				
+				// Reset filters if switching to month view
+				if (this.view === 'month') {
+					this.resetFilters();
+                    this.filterTagsUpdate();
+				}
+				
                 this.setMonthNavigation();
                 this.collectTimed();
             }
@@ -294,8 +404,8 @@
                 '12': 'December'
             };
             
-            const year = String(num).slice(0,4);            // from start to 4th position
-            const month = monthMap[String(num).slice(4)];   // from 4 to the end
+            const year = String(num).slice(0,4);            // YYYMM - from start to 4th position to get year
+            const month = monthMap[String(num).slice(4)];   // YYYMM - from 4th to the end
             
             return month + " " + year;
         },
@@ -304,10 +414,35 @@
             const current = this.target.querySelector('#switch_month').dataset.current;
             this.target.querySelector('#current-month').innerHTML = this.numberToMonth( current );
         },
+				
+		toggleFacetOptions: function() {
+            const _this = this;
+            $('.event-facet').on('click', '.facet-toggle', function(event) {
+                event.preventDefault();  // Prevent the default action
+                event.stopPropagation();  // Stop any other bound event
+
+                const fieldset = $(this).closest('.event-facet').find('fieldset');
+                const toggleSign = $(this).find('.facet-toggle-sign');
+
+                // Change the +/- symbol depending on the state
+                if (fieldset.is(':visible')) {
+                    toggleSign.text('+');
+                } else {
+                    toggleSign.text('-');
+                }
+
+                // Toggle open/close the filter
+                fieldset.slideToggle(350);
+            });
+        },
 
         scrollTop: function() {
-            document.body.scrollTop = 0; // For Safari
-            document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+            const headerHeight = $('header').outerHeight();
+			let targetOffset = $('.sonoma-events-container').offset().top - headerHeight;
+
+			$('html, body').animate({
+				scrollTop: targetOffset
+			}, 1000);
         },
         
 		triggerHook: function( hook, args )
