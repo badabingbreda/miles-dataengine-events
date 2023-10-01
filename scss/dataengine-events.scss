@@ -9,7 +9,7 @@
         display: inline-block;
     }
 
-    .de-pagination {
+    .event-pagination {
         ul {
             display: flex;
             flex-grow: 1;
@@ -21,11 +21,13 @@
                 line-height: 20px;
                 cursor: pointer;
 
+
+
                 &:hover {
                     background-color: #f1f1f1;
                 }
 
-                &.de-active {
+                &.current {
                     font-weight: 700;
                     text-decoration: underline;
                     text-decoration-thickness: .2em;

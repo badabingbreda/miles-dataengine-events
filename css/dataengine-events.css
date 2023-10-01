@@ -4,11 +4,11 @@
 .dataengine-events-container.updating .loading {
 	display: inline-block;
 }
-.dataengine-events-container .de-pagination ul {
+.dataengine-events-container .event-pagination ul {
 	display: flex;
 	flex-grow: 1;
 }
-.dataengine-events-container .de-pagination ul li {
+.dataengine-events-container .event-pagination ul li {
 	list-style: none;
 	padding: 5px;
 	min-width: 20px;
@@ -16,10 +16,10 @@
 	line-height: 20px;
 	cursor: pointer;
 }
-.dataengine-events-container .de-pagination ul li:hover {
+.dataengine-events-container .event-pagination ul li:hover {
 	background-color: #f1f1f1;
 }
-.dataengine-events-container .de-pagination ul li.de-active {
+.dataengine-events-container .event-pagination ul li.current {
 	font-weight: 700;
 	text-decoration: underline;
 	text-decoration-thickness: 0.2em;

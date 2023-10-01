@@ -80,13 +80,6 @@ class Events {
 		$_month = filter_input( INPUT_GET , '_month' , FILTER_SANITIZE_NUMBER_INT );
 
 
-		// change the view if, on load, either the _page or _month param is detected
-		if( $_page ) {
-			$_view = 'paged';
-		} elseif ($_month ) {
-			$_view = 'month';
-		}
-
 		self::$settings = [
 			'supertag' => $_supertag ? $_supertag : null,
 			'view'	=> $_view ? $_view : self::$default_view,	// use default if not set
@@ -103,6 +96,14 @@ class Events {
 			self::$settings,
 			$override
 		);
+
+		// one final but important override
+		// change the view if, on load, either the _page or _month param is detected
+		if( $_page ) {
+			self::$settings['view'] = 'paged';
+		} elseif ($_month ) {
+			self::$settings['view'] = 'month';
+		}
 	
 	}
 	
@@ -163,16 +164,6 @@ class Events {
 
 			// events after filtering for month
 			$events = array_filter( $events , function( $event ) use ( $_month ) { return strpos( $event[ 'sort_date' ] , $_month ) === 0; } );
-
-			if ( sizeof($events) == 0 ) {
-
-				// find first event in full $events list with a date larger than our $_month+31 (yyyymm31)
-
-				// reverse $events, find first date smaller than $_month+01 (reverse because otherwise the first item will be returned)
-
-			}
-			
-
 		}
 
 		return $events;
@@ -203,6 +194,7 @@ class Events {
 		
 		// get url params for later use, override certain settings with shortcode settings
 		self::get_settings( [ 
+								'view' => $atts[ 'view' ],
 								'supertag' => $atts[ 'supertag' ],
 							]);
 
@@ -273,7 +265,8 @@ class Events {
 		</div>
 		EOT : '');
 
-		$type_tag_control = ( $atts[ 'supertag' ] !== '' ? <<<EOT
+		// when supertag is NOT provided, show our type tag
+		$type_tag_visible =  ( $atts[ 'supertag' ] == '' ? <<<EOT
 			<div id="type_tag" class="event-facet">
 				<button class="facet-toggle"> <h4 class="facet-title">Type</h4><span class="facet-toggle-sign">+</span> </button>
 				<fieldset>
@@ -302,7 +295,7 @@ class Events {
 								{$city_tag_control}
 							</fieldset>
 						</div>
-						{$type_tag_control}
+						{$type_tag_visible}
 						<div id="keyword">
 							{$keyword}
 						</div>
