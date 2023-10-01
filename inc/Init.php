@@ -1,12 +1,12 @@
 <?php
-namespace SonomaEvents;
+namespace DataEngineEvents;
 
-use SonomaEvents\Helpers\StyleScript;
-use SonomaEvents\SonEvents;
+use DataEngineEvents\Helpers\StyleScript;
+use DataEngineEvents\Events;
 
 class Init {
     public function __construct() {
         new StyleScript();
-        new SonEvents();
+        new Events();
     }
 }

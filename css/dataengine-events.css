@@ -1,0 +1,40 @@
+.dataengine-events-container .loading {
+	display: none;
+}
+.dataengine-events-container.updating .loading {
+	display: inline-block;
+}
+.dataengine-events-container .de-pagination ul {
+	display: flex;
+	flex-grow: 1;
+}
+.dataengine-events-container .de-pagination ul li {
+	list-style: none;
+	padding: 5px;
+	min-width: 20px;
+	min-height: 20px;
+	line-height: 20px;
+	cursor: pointer;
+}
+.dataengine-events-container .de-pagination ul li:hover {
+	background-color: #f1f1f1;
+}
+.dataengine-events-container .de-pagination ul li.de-active {
+	font-weight: 700;
+	text-decoration: underline;
+	text-decoration-thickness: 0.2em;
+	text-underline-offset: 1em;
+}
+.dataengine-events-container #switch_view {
+	/**/
+}
+.dataengine-events-container #switch_month a.previous, .dataengine-events-container #switch_month a.next {
+	cursor: pointer;
+}
+.dataengine-events-container #switch_month a.previous.disabled, .dataengine-events-container #switch_month a.next.disabled {
+	pointer-events: none;
+	opacity: 0.5;
+}
+.dataengine-events-container[data-view=paged] #switch_month {
+	display: none;
+}

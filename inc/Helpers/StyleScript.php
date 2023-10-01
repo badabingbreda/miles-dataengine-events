@@ -1,5 +1,5 @@
 <?php
-namespace SonomaEvents\Helpers;
+namespace DataEngineEvents\Helpers;
 
 class StyleScript {
 
@@ -8,13 +8,13 @@ class StyleScript {
     }
 
     public static function register() {
-        wp_register_script( 'sonoma-events', SONOMAEVENTS_URL . 'js/sonoma-events.js', null,  SONOMAEVENTS_VERSION , false );
-        wp_register_style( 'sonoma-events' , SONOMAEVENTS_URL . 'css/sonoma-events.css' , null , SONOMAEVENTS_VERSION , 'all' );
+        wp_register_script( 'dataengine-events', DATAENGINEEVENTS_URL . 'js/dataengine-events.js', null,  DATAENGINEEVENTS_VERSION , false );
+        wp_register_style( 'dataengine-events' , DATAENGINEEVENTS_URL . 'css/dataengine-events.css' , null , DATAENGINEEVENTS_VERSION , 'all' );
     }
 
     public static function enqueue() {
-        wp_enqueue_script( 'sonoma-events' );
-        wp_enqueue_style( 'sonoma-events');
-        wp_localize_script( 'sonoma-events', 'SONOMAEVENTS', array( 'admin_ajax' => \admin_url( 'admin-ajax.php' ) ) );
+        wp_enqueue_script( 'dataengine-events' );
+        wp_enqueue_style( 'dataengine-events');
+        wp_localize_script( 'dataengine-events', 'DATAENGINEEVENTS', array( 'admin_ajax' => \admin_url( 'admin-ajax.php' ) ) );
     }
 }

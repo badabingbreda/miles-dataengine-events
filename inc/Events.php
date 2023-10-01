@@ -1,13 +1,13 @@
 <?php
-namespace SonomaEvents;
+namespace DataEngineEvents;
 
-use SonomaEvents\Helpers\StyleScript;
+use DataEngineEvents\Helpers\StyleScript;
 
-class SonEvents {
+class Events {
 	
 	private static $expiration = 60 * 60;	// an hour
 	private static $refresh = false;			// force refresh or not
-	private static $ajax_action = 'sonoma-events';
+	private static $ajax_action = 'dataengine-events';
 	private static $per_page = 30;
 	private static $default_view = 'month';
 
@@ -17,7 +17,7 @@ class SonEvents {
 	
 	public function __construct() {
 		
-		add_shortcode( 'sonoma-events' , __CLASS__ . '::event_shortcode' );
+		add_shortcode( 'dataengine-events' , __CLASS__ . '::event_shortcode' );
         
 		add_action( 'wp_ajax_' . self::$ajax_action , __CLASS__ . '::ajax_events' );
 		add_action( 'wp_ajax_nopriv_' . self::$ajax_action , __CLASS__ . '::ajax_events' );
@@ -193,7 +193,7 @@ class SonEvents {
 				'view'		=> self::$default_view,
 				'refresh' 	=> self::$refresh,	// force a transient refresh on each request
 				'supertag' 	=> null,			// show events with this supertag only
-				'id'		=> uniqid( 'son-event-' ),	// create id if needed
+				'id'		=> uniqid( 'de-event-' ),	// create id if needed
 				'switch'	=> 'true',
 				
 			],
@@ -290,7 +290,7 @@ class SonEvents {
 					data-month="{$month}"
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
-					class="sonoma-events-container">
+					class="dataengine-events-container">
 					<div id="filter-sidebar" class="event-filters">
 						<div id="filter_list">
 						</div>
@@ -337,7 +337,7 @@ class SonEvents {
 				<script>
 					(function($) { 
 						$(document).ready( function() {
-							new SonomaEvents({ id : "{$atts[ 'id' ]}" , view: "{$atts[ 'view' ]}" });
+							new DataEngineEvents({ id : "{$atts[ 'id' ]}" , view: "{$atts[ 'view' ]}" });
 						});
 					})(jQuery);
 				</script>
@@ -351,7 +351,7 @@ class SonEvents {
 			<p>Please come back some other time, maybe there'll be some.</p>
 		EOT;
 
-		return apply_filters( 'sonoma-events/no-events-found', $return , self::$settings );
+		return apply_filters( 'dataengine-events/no-events-found', $return , self::$settings );
 	}
 	
 	/**
@@ -443,7 +443,7 @@ class SonEvents {
 
 		$item .= self::paged_list_item( $event );
 
-		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
+		return apply_filters( 'dataengine-events/paged/list-item' , $item , $event , self::$settings );
 	}
 
 
@@ -490,7 +490,7 @@ class SonEvents {
 			</div>
 		EOT;
 
-		return apply_filters( 'sonoma-events/paged/list-item-heading' , $heading , $event , self::$settings );
+		return apply_filters( 'dataengine-events/paged/list-item-heading' , $heading , $event , self::$settings );
 
 	}
 
@@ -521,7 +521,7 @@ class SonEvents {
 		</div>
 		EOT;
 
-		return apply_filters( 'sonoma-events/paged/list-item' , $item , $event , self::$settings );
+		return apply_filters( 'dataengine-events/paged/list-item' , $item , $event , self::$settings );
 
 	}
 	
@@ -544,7 +544,7 @@ class SonEvents {
 			</tr>
 		EOT;
 
-		return apply_filters( 'sonoma-events/month/list-item-heading' , $heading , $event , self::$settings );
+		return apply_filters( 'dataengine-events/month/list-item-heading' , $heading , $event , self::$settings );
 
 	}
 	
@@ -572,7 +572,7 @@ class SonEvents {
 			</td>
 		</tr>
 		EOT;
-		return apply_filters( 'sonoma-events/month/list-item' , $item , $event , self::$settings );
+		return apply_filters( 'dataengine-events/month/list-item' , $item , $event , self::$settings );
 
 	}
 
@@ -695,12 +695,12 @@ class SonEvents {
 		
 		// if a supertag has been set try to get the transient and return early
 		if ( self::$settings['supertag'] ) {
-			if ( \get_transient( 'sonoma_events_sorted_tag_' . self::$settings['supertag'] ) && !$refresh ) {
-				return \get_transient( 'sonoma_events_sorted_tag_' . self::$settings['supertag'] );
+			if ( \get_transient( 'dataengine_events_sorted_tag_' . self::$settings['supertag'] ) && !$refresh ) {
+				return \get_transient( 'dataengine_events_sorted_tag_' . self::$settings['supertag'] );
 			}
 		} else {
-			if ( \get_transient( 'sonoma_events_sorted' ) && !$refresh ) {
-				return \get_transient( 'sonoma_events_sorted' );
+			if ( \get_transient( 'dataengine_events_sorted' ) && !$refresh ) {
+				return \get_transient( 'dataengine_events_sorted' );
 			}
 		}
 		
@@ -742,9 +742,9 @@ class SonEvents {
 			usort( $all_posts , [ __CLASS__ , 'sort_function' ]);
 			
 			if ( self::$settings['supertag'] ) {
-				\set_transient( 'sonoma_events_sorted_tag_' . self::$settings['supertag'] , $all_posts , self::$expiration );
+				\set_transient( 'dataengine_events_sorted_tag_' . self::$settings['supertag'] , $all_posts , self::$expiration );
 			} else {
-				\set_transient( 'sonoma_events_sorted' , $all_posts , self::$expiration );
+				\set_transient( 'dataengine_events_sorted' , $all_posts , self::$expiration );
 			}
 			
 			return $all_posts;
@@ -801,7 +801,13 @@ class SonEvents {
 		
 		return $return;
 	}
-
+	
+	/**
+	 * descriptions
+	 *
+	 * @param  mixed $post_id
+	 * @return void
+	 */
 	private static function descriptions( $post_id ) {
 		// get descriptions repeater field
 		$descriptions = \get_field( 'descriptions' , $post_id );

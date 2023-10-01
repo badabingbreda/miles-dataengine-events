@@ -2,11 +2,11 @@
 /**
  * Autoloader class
  *
- * @package BBClassDropdown
+ * @package DataEngineEvents
  * @since 1.0.0
  */
 
-namespace SonomaEvents;
+namespace DataEngineEvents;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
@@ -28,7 +28,7 @@ class Autoloader {
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const AUTOLOADED_NAMESPACE_PREFIX = 'SonomaEvents\\';
+	const AUTOLOADED_NAMESPACE_PREFIX = 'DataEngineEvents\\';
 
 	/**
 	 * Loads the class file if it is in the autoloaded namespace.
@@ -86,6 +86,6 @@ class Autoloader {
 		$relative_class_path = substr( $class, strlen( self::AUTOLOADED_NAMESPACE_PREFIX ) );
 		$relative_file_path = str_replace( '\\', '/', $relative_class_path ) . '.php';
 
-		return dirname( SONOMAEVENTS_FILE ) . '/inc/' . $relative_file_path;
+		return dirname( DATAENGINEEVENTS_FILE ) . '/inc/' . $relative_file_path;
 	}
 }

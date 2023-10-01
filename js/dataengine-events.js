@@ -1,11 +1,11 @@
 (function($){
 
-    SonomaEvents = function( settings ) {
+    DataEngineEvents = function( settings ) {
         this.settings = settings;
         this._init();
     }
 
-    SonomaEvents.prototype =  {
+    DataEngineEvents.prototype =  {
 
         settings        : {},
         source          : null,
@@ -36,7 +36,7 @@
             this.keyword = this.target.querySelector( '#keyword input' );
             this.resetfilters = this.target.querySelector( '#reset_filters button' );
 
-            this.source = SONOMAEVENTS.admin_ajax + '?action=sonoma-events';
+            this.source = DATAENGINEEVENTS.admin_ajax + '?action=dataengine-events';
             this.view = this.target.dataset.view;
 
             this.settings.upperbound = this.target.dataset?.upperbound || null;
@@ -450,7 +450,7 @@
 
         scrollTop: function() {
             const headerHeight = $('header').outerHeight();
-			let targetOffset = $('.sonoma-events-container').offset().top - headerHeight;
+			let targetOffset = $('.dataengine-events-container').offset().top - headerHeight;
 
 			$('html, body').animate({
 				scrollTop: targetOffset
@@ -459,17 +459,17 @@
         
 		triggerHook: function( hook, args )
 		{
-			$( 'body' ).trigger( 'sonoma-events.' + hook, args );
+			$( 'body' ).trigger( 'dataengine-events.' + hook, args );
 		},
 
 		addHook: function( hook, callback )
 		{
-			$( 'body' ).on( 'sonoma-events.' + hook, callback );
+			$( 'body' ).on( 'dataengine-events.' + hook, callback );
 		},
 
 		removeHook: function( hook, callback )
 		{
-			$( 'body' ).off( 'sonoma-events.' + hook, callback );
+			$( 'body' ).off( 'dataengine-events.' + hook, callback );
 		},        
 
     }
