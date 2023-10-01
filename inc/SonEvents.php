@@ -39,6 +39,13 @@ class SonEvents {
 
 		$all_events = self::get_events( self::$refresh );
 
+		// no events to be found whatsoever
+		if ( $events === false ) {
+			echo self::no_events_found();
+			wp_die();
+		}
+
+
 		$all_events = self::event_filter( $all_events );
 		
 		if ( 'paged' == self::$settings['view'] ) {
@@ -209,6 +216,10 @@ class SonEvents {
 		
 		$events = self::get_events( $atts[ 'refresh' ] );
 		
+		// There are NO RESULTS whatsoever found in the database
+		// we can skip all the filters because none will work.
+		if ( $events === false ) return self::no_events_found();
+
 		// get all tags from the events
 		if ($events) {
 			foreach ($events as $event) {
@@ -216,6 +227,7 @@ class SonEvents {
 				$type_tag = array_merge( $type_tag , $event[ 'type' ] );
 			}
 		}
+
 
 		$city_tag = self::clean_array( $city_tag );
 		$type_tag = self::clean_array( $type_tag );
@@ -317,10 +329,9 @@ class SonEvents {
 						<p>Please try another search to find what you're looking for.</p>
 					</template>
 					<template id="filter_list_item">
-						<a class="filter-list-item-remove" 
-							data-value="{{value}}"
-							data-type="{{type}}"
-							style="background-color:red;color:white;padding: 5px 8px;">{{label}}</a>
+						<button class="filter-list-item-remove" data-value="{{value}}" data-type="{{type}}">
+							<span><span class="sr-only">Remove </span>{{label}}</span>
+						</button>
 					</template>
 				</div> 
 				<script>
@@ -331,6 +342,16 @@ class SonEvents {
 					})(jQuery);
 				</script>
 		EOT;
+	}
+
+	private static function no_events_found() {
+
+		$return = <<<EOT
+			<h2>We found no events at this moment. Not now, not in the future.</h2>
+			<p>Please come back some other time, maybe there'll be some.</p>
+		EOT;
+
+		return apply_filters( 'sonoma-events/no-events-found', $return , self::$settings );
 	}
 	
 	/**
@@ -572,6 +593,11 @@ class SonEvents {
 
 		$radius = 3;
 		$total = sizeof( $all_events );
+		
+		if ($total <= 1) {
+        // Return empty string or null if there's only one page.
+			return '';
+		}
 
 		for($i = 1; $i <= $total; $i++){
 		  if(($i >= 1 && $i <= $radius) || ($i > $current - $radius && $i < $current + $radius) || ($i <= $total && $i > $total - $radius)){

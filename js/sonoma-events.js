@@ -55,7 +55,7 @@
             this.addHook( 'beforeCollect' , this.currentMonthHeader.bind( this ) );
 
             // add and remove updating class
-            this.addHook( 'beforeUpdate' , this.addUpdatingClass.bind( this ) );
+            this.addHook( 'beforeCollect' , this.addUpdatingClass.bind( this ) );
             this.addHook( 'afterUpdate' , this.removeUpdatingClass.bind( this ) );
 
             this.triggerHook( 'afterInit' );
@@ -64,22 +64,12 @@
 
         addListeners: function() {
 
-            
             const _this = this;
-
-            // this.target.querySelectorAll( '#city_tag input' ).forEach( elem =>
-            //     elem.addEventListener( 'click' , _this.collectTimed.bind( _this ) )
-            // );
+			
             $('#city_tag input').on("click", () => this.handleTagClicked());
-
-            // this.target.querySelectorAll( '#type_tag input' ).forEach( elem =>
-            //     elem.addEventListener( 'click' , this.collectTimed.bind( _this ) )
-            // );
 			$('#type_tag input').on("click", () => this.handleTagClicked());
-
-            // keyword search
-            //if (this.keyword ) this.keyword.addEventListener( 'keyup' , this.collectTimed.bind( _this ) );
-            $(this.keyword).on("input", () => this.collectTimed());
+            
+			$(this.keyword).on("input", () => this.collectTimed());
 
             // pagination
             this.target.addEventListener( 'click' , this.pagination.bind( _this ) );
@@ -115,6 +105,7 @@
 			
 			
             this.timeOut = setTimeout(() => {
+                this.filterTagsUpdate();
                 this.collect(event, page);
             }, this.updateDelay );
 
@@ -185,27 +176,36 @@
         } ,       
 
         handleTagClicked: function( event ) {
-            this.filterTagsUpdate();
             this.collectTimed( event );
         },
 
-        handleRemoveFilterTagClick: function( event ) {
-            if (event.target.classList.contains( 'filter-list-item-remove' ) ) {
-                event.preventDefault();
-                // get the type
-                let type = event.target.dataset.type;
+        handleRemoveFilterTagClick: function(event) {
+			// Find the closest '.filter-list-item-remove' element up the DOM tree
+			let closestElement = event.target.closest('.filter-list-item-remove');
 
-                // disable the item in the list
-                this[type + 'tag'].forEach( 
-                    elem => { 
-                        if ( elem.value == event.target.dataset.value ) elem.checked = false; } 
-                );
-                // re-update the tags
-                this.filterTagsUpdate();
-                this.collectTimed();
+			if (closestElement) {
+				event.preventDefault();
 
-            }
-        },     
+				// Get the type
+				let type = closestElement.dataset.type;
+
+                if ( type == 'keyword' ) {
+                    // remove keyword value
+                    this.keyword.value = '';
+
+                } else {
+
+                    // Disable the item in the list
+                    this[type + 'tag'].forEach(
+                        elem => {
+                            if (elem.value == closestElement.dataset.value) elem.checked = false;
+                        }
+                    );
+                }
+
+				this.collectTimed();
+			}
+		},     
 
         filterTagsUpdate: function() {
             const list_item_template = this.target.querySelector( 'template#filter_list_item' ).innerHTML;
@@ -218,10 +218,10 @@
                 // collect tags and bring to tag_list
                 var nodes = this.target.querySelectorAll( `input[name="_city[]"]:checked`);
                 nodes.forEach( elem => {
-                    var currentLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
-                        currentValue = elem.value;                  
+                    var tagLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
+                        valueToRemove = elem.value;                  
 
-                    var newTag = this.createElement( list_item_template , 'city', currentValue , currentLabel );
+                    var newTag = this.createElement( list_item_template , 'city', valueToRemove , tagLabel );
 
                     this.filter_list.appendChild( newTag );  
                 } );
@@ -229,13 +229,26 @@
                 // collect tags and bring to tag_list
                 var nodes = this.target.querySelectorAll( `input[name="_type[]"]:checked`);
                 nodes.forEach( elem => {
-                    var currentLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
-                        currentValue = elem.value;                  
+                    var tagLabel = elem.parentElement.querySelector( 'label' ).innerHTML,
+                        valueToRemove = elem.value;                  
 
-                    var newTag = this.createElement( list_item_template , 'type', currentValue , currentLabel );
+                    var newTag = this.createElement( list_item_template , 'type', valueToRemove , tagLabel );
 
                     this.filter_list.appendChild( newTag );  
                 } );
+				
+                if (this.keyword && this.keyword.value !== '' ) {
+                    var newTag = this.createElement( list_item_template , 'keyword', '' , this.keyword.value );
+                    this.filter_list.appendChild( newTag );
+                }
+
+                // Show or hide the filter_list based on its content
+				if (this.filter_list.childNodes.length > 0) {
+					this.filter_list.style.display = 'block';
+				} else {
+					this.filter_list.style.display = 'none';
+				}
+
 
             }
 
@@ -322,7 +335,6 @@
 				// Reset filters if switching to month view
 				if (this.view === 'month') {
 					this.resetFilters();
-                    this.filterTagsUpdate();
 				}
 				
                 this.setMonthNavigation();
