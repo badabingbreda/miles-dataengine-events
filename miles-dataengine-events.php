@@ -9,7 +9,7 @@
  * @wordpress-plugin
  * Plugin Name: Miles DataEngine Events
  * Description: Miles DataEngine Events Grid
- * Version:     1.1.0
+ * Version:     1.2.0
  * Text Domain: dataengine-events
  * License:     GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
@@ -31,7 +31,7 @@ if ( defined( 'ABSPATH' ) && ! defined( 'DATAENGINEEVENTS_VERION' ) ) {
     }
  }
 
-  define( 'DATAENGINEEVENTS_VERSION'   , '1.1.0' );
+  define( 'DATAENGINEEVENTS_VERSION'   , '1.2.0' );
   define( 'DATAENGINEEVENTS_DIR'     , plugin_dir_path( __FILE__ ) );
   define( 'DATAENGINEEVENTS_FILE'    , __FILE__ );
   define( 'DATAENGINEEVENTS_URL'     , plugins_url( '/', __FILE__ ) );
