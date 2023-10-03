@@ -340,8 +340,8 @@ class Events {
 	private static function no_events_found() {
 
 		$return = <<<EOT
-			<h2>We found no events at this moment. Not now, not in the future.</h2>
-			<p>Please come back some other time, maybe there'll be some.</p>
+			<h2>Sorry, no upcoming events.</h2>
+			<p>Please check back again in the future!</p>
 		EOT;
 
 		return apply_filters( 'dataengine-events/no-events-found', $return , self::$settings );
