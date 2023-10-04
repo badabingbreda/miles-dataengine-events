@@ -38,3 +38,12 @@
 .dataengine-events-container[data-view=paged] #switch_month {
 	display: none;
 }
+.dataengine-events-container #listing .dataengine-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 20px;
+}
+.dataengine-events-container #listing .dataengine-grid > div {
+	padding: 20px;
+	box-sizing: border-box;
+}

@@ -21,6 +21,10 @@ class Events {
         
 		add_action( 'wp_ajax_' . self::$ajax_action , __CLASS__ . '::ajax_events' );
 		add_action( 'wp_ajax_nopriv_' . self::$ajax_action , __CLASS__ . '::ajax_events' );
+
+		add_filter( 'dataengine-events/grid/render' , __CLASS__ . '::grid_render_dom' , 10 , 2 );
+		add_filter( 'dataengine-events/month/render' , __CLASS__ . '::month_render_dom' , 10 , 2 );
+
 	}
 		
 	/**
@@ -41,23 +45,19 @@ class Events {
 
 		// no events to be found whatsoever
 		if ( $events === false ) {
-			echo self::no_events_found();
+			echo wp_json_encode( self::no_events_found() );
 			wp_die();
 		}
-
 
 		$all_events = self::event_filter( $all_events );
 		
 		if ( 'paged' == self::$settings['view'] ) {
-
-			echo self::render_paged_events($all_events);
-
+			echo wp_json_encode( self::render_paged_events($all_events) );
 		} elseif ( 'month' == self::$settings['view'] ) {
-
-			echo self::render_month_events( $all_events );
-
+			echo wp_json_encode( self::render_month_events( $all_events ) );
+		} elseif ( 'grid' == self::$settings['view'] ) {
+			echo wp_json_encode( self::render_grid_events( $all_events ) );
 		}
-		
 		wp_die();
 	}
 		
@@ -78,6 +78,7 @@ class Events {
 		$_keyword = filter_input( INPUT_GET , '_keyword' );
 		$_page = filter_input( INPUT_GET , '_page' , FILTER_SANITIZE_NUMBER_INT );
 		$_month = filter_input( INPUT_GET , '_month' , FILTER_SANITIZE_NUMBER_INT );
+		$_grid = filter_input( INPUT_GET , '_grid' , FILTER_SANITIZE_NUMBER_INT );
 
 
 		self::$settings = [
@@ -88,6 +89,7 @@ class Events {
 			'keyword' => $_keyword ? strtolower( $_keyword ) : null,
 			'page' => ($_page > 0 ? $_page : 1),				// use 1 if not set or zero
 			'month' => $_month ? $_month : date( 'Ym' ),		// use current month if not set
+			'grid' => ($_grid > 0 ? $_grid : 1),				// use 1 if not set or zero
 			'per_page' => self::$per_page,
 		];
 
@@ -103,6 +105,8 @@ class Events {
 			self::$settings['view'] = 'paged';
 		} elseif ($_month ) {
 			self::$settings['view'] = 'month';
+		} elseif ($_grid ) {
+			self::$settings['view'] = 'grid';
 		}
 	
 	}
@@ -151,11 +155,13 @@ class Events {
 			);
 		}
 
-		if ( 'paged' == self::$settings['view'] ) {
-
+		if ( 
+			'paged' == self::$settings['view'] 
+				||
+			'grid' == self::$settings['view']
+		) {
 			// slice to the pagination
 			$events = array_chunk( $events , self::$settings['per_page'] , true );
-			
 		} 
 
 		elseif ( 'month' == self::$settings['view'] ) {
@@ -178,7 +184,6 @@ class Events {
 	 */
 	public static function event_shortcode( $atts ) {
 
-		
 		$atts = shortcode_atts( 
 			[
 				'view'		=> self::$default_view,
@@ -191,13 +196,11 @@ class Events {
 			$atts
 		);
 		
-		
 		// get url params for later use, override certain settings with shortcode settings
 		self::get_settings( [ 
 								'view' => $atts[ 'view' ],
 								'supertag' => $atts[ 'supertag' ],
 							]);
-
 
 		StyleScript::enqueue();
 		
@@ -239,17 +242,21 @@ class Events {
 
 			// filter events with our selections
 			$events = self::event_filter( $events );
-			
-			$listings = self::render_paged_events($events);
+			$data = self::render_paged_events($events);
 		} 
 		elseif ( 'month' == self::$settings[ 'view' ] ) {
 
+			// now filter our events
+			$events = self::event_filter( $events );
+			$data = self::render_month_events($events);
+
+		} 
+		elseif ( 'grid' == self::$settings[ 'view' ] ) {
 
 			// now filter our events
 			$events = self::event_filter( $events );
-
-			$listings = self::render_month_events($events);
-
+			$data = self::render_grid_events( $events );
+	
 		}
 
 		$lowerbound = date( 'Ym' );		// get lower bound, disable prev button
@@ -311,7 +318,10 @@ class Events {
 						{$switch_view}
 					</div>
 					<div id="listing">
-						{$listings}
+						{$data['listing']}
+					</div>
+					<div id="pagination">
+						{$data['pagination']}
 					</div>
 					<template id="month-no-results">
 						<h2>Sorry, there are no results matching your search criteria for this month</h2>
@@ -335,16 +345,6 @@ class Events {
 					})(jQuery);
 				</script>
 		EOT;
-	}
-
-	private static function no_events_found() {
-
-		$return = <<<EOT
-			<h2>Sorry, no upcoming events.</h2>
-			<p>Please check back again in the future!</p>
-		EOT;
-
-		return apply_filters( 'dataengine-events/no-events-found', $return , self::$settings );
 	}
 	
 	/**
@@ -373,14 +373,18 @@ class Events {
 		}
 		// render the chunck of events
 		$listings = implode( '', $event_list );
+		$pagination = '';
 
 		if ( $listings ) {
 			
 			// add the pagination after
-			$listings .= self::pagination( $events , $page );
+			$pagination = self::pagination( $events , $page );
 		}
 
-		return $listings;
+		return [
+			'listing' => apply_filters( 'dataengine-events/paged/render' , $listings , self::$settings ),
+				'pagination' => $pagination,
+			];
 
 	}
 	
@@ -401,16 +405,105 @@ class Events {
 
 		// render the chunck of events
 		$listings = implode('', $event_list);
+		$pagination = '';
 
 		if (!$listings) {
-			return '';
-		} else {
-			return "<table>". 
-					$listings.
-					"</table>";
+			$listings = '';
 		}
+
+		return [
+			'listing' => apply_filters( 'dataengine-events/month/render' , $listings , self::$settings ),
+			'pagination' => $pagination,
+		];
 		
 	}
+
+
+	/**
+	 * render_paged_events
+	 *
+	 * @param  mixed $events
+	 * @return void
+	 */
+	private static function render_grid_events( $events ) {
+
+		// use an array to build listing
+		$event_list = [];
+
+		// no need to return anything if on first request there are no events
+		if ( sizeof( $events ) == 0 ) return '';
+
+		// page to get
+		$grid = self::$settings['grid'];
+
+		// make sure we don't do a call to a page that doesn't exist
+		// fall back to page 1 if does not exist (any more)
+		if ( sizeof( $events ) < self::$settings['grid'] ) $grid = 1;
+
+		foreach ($events[ $grid - 1 ] as $event ) {
+			$event_list[] = self::render_grid_list_item( $event );
+		}
+		// render the chunck of events
+		$listings = implode( '', $event_list );
+		$pagination = '';
+
+		if ( $listings ) {
+			// add the pagination after
+			$pagination = self::pagination( $events , $grid );
+		}
+
+		return [
+			'listing' => apply_filters( 'dataengine-events/grid/render' , $listings , self::$settings ),
+			'pagination' => $pagination,
+		];
+
+	}
+	
+	/**
+	 * month_render_dom
+	 *
+	 * @param  mixed $listings
+	 * @param  mixed $settings
+	 * @return void
+	 */
+	public static function month_render_dom( $listings , $settings ) {
+
+		if ($listings !== '' ) $listings = "<table>{$listings}</table>";
+		return $listings;
+	}
+	
+	/**
+	 * grid_render_dom
+	 *
+	 * @param  mixed $listings
+	 * @param  mixed $settings
+	 * @return void
+	 */
+	public static function grid_render_dom( $listings , $settings ) {
+
+		if ($listings !== '' ) $listings = "<div class=\"dataengine-grid\">{$listings}</div>";
+		return $listings;
+	}
+
+	/**
+	 * no_events_found
+	 *
+	 * @return void
+	 */
+	private static function no_events_found() {
+
+		$return = <<<EOT
+			<h2>Sorry, no upcoming events.</h2>
+			<p>Please check back again in the future!</p>
+		EOT;
+
+		return [
+				'listing' => apply_filters( 'dataengine-events/no-events-found', $return , self::$settings ),
+				'pagination' => apply_filters( 'dataengine-events/no-events-found/pagination' , '' , self::$settings ),
+		];
+	}
+
+
 
 	/**
 	 * render_paged_list_item
@@ -436,7 +529,7 @@ class Events {
 
 		$item .= self::paged_list_item( $event );
 
-		return apply_filters( 'dataengine-events/paged/list-item' , $item , $event , self::$settings );
+		return $item;
 	}
 
 
@@ -465,6 +558,20 @@ class Events {
 
 		return $item;
 	}
+
+	/**
+	 * render_grid_list_item
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
+	private static function render_grid_list_item( $event ) {
+
+		$item = self::grid_list_item( $event );
+
+		return $item;
+	}
+
 	
 
 	/**
@@ -569,6 +676,31 @@ class Events {
 
 	}
 
+	/**
+	 * grid_list_item
+	 *
+	 * @param  mixed $event
+	 * @return void
+	 */
+	private static function grid_list_item( $event ) {
+
+		$event_time = 'See Details';
+
+		if ($event[ 'start_time_pm' ] && $event[ 'end_time_pm' ] ) {
+			$event_time = $event[ 'start_time_pm' ] . ' - ' . $event[ 'end_time_pm' ];
+		}
+
+		$item = <<<EOT
+		<div>
+			<h4>{$event[ 'post_title' ] }</h4>
+		</div>
+		EOT;
+		return apply_filters( 'dataengine-events/grid/list-item' , $item , $event , self::$settings );
+
+	}
+
+
+
 
 	
 	/**
@@ -610,7 +742,9 @@ class Events {
 		$return .= '</ul>' .
 					'</div>';
 
-		return $return;
+		$view = self::$settings[ 'view' ];
+
+		return apply_filters( "dataengine-events/pagination/{$view}" , $return , $all_events , $current );
 	}
 		
 	/**
@@ -631,7 +765,15 @@ class Events {
 		$dropdown .= "<select>";
 		return $dropdown;
 	}
-
+	
+	/**
+	 * multiselect
+	 *
+	 * @param  mixed $values
+	 * @param  mixed $param
+	 * @param  mixed $placeholder
+	 * @return void
+	 */
 	private static function multiselect( $values , $param , $placeholder = '' ) {
 
 		$param_values = filter_input( INPUT_GET , $param );
@@ -652,7 +794,12 @@ class Events {
 		$options .= '</div>';
 		return $options;
 	}
-
+	
+	/**
+	 * keywordinput
+	 *
+	 * @return void
+	 */
 	private static function keywordinput() {
 		$value = self::$settings[ 'keyword' ];
 		return <<<EOT

@@ -26,6 +26,7 @@
 
             this.filter_list = this.target.querySelector( '#filter_list' );
             this.listing = this.target.querySelector( '#listing' );
+            this.pagination = this.target.querySelector( '#pagination' );
 
             this.previous = this.target.querySelector( '#switch_month a.previous' );
             this.next = this.target.querySelector( '#switch_month a.next' );
@@ -72,7 +73,7 @@
 			$(this.keyword).on("input", () => this.collectTimed());
 
             // pagination
-            this.target.addEventListener( 'click' , this.pagination.bind( _this ) );
+            this.target.addEventListener( 'click' , this.handlePaginationClick.bind( _this ) );
             // change months
             this.target.addEventListener( 'click' , this.changeMonth.bind( _this ) );
             // switch view
@@ -117,7 +118,9 @@
         collect: function( event, page ) {
 			
 			// Switch to paged view if any of the filters are used
-			if (this.multiValue('_city').length > 0 || this.multiValue('_type').length > 0 || this.keyword.value) {
+			if (this.multiValue('_city').length > 0 || 
+                this.multiValue('_type').length > 0 || 
+                this.keyword.value) {
 				this.view = "paged";
 				this.target.dataset.view = this.view;
 // 				this.setMonthNavigation();  // If needed
@@ -134,6 +137,8 @@
                 params = { ...params , ...{ _page : page || 1, } };
             } else if ( 'month' == this.view ) {
                 params = { ...params , ...{ _month : this.month } };
+            } else if ( 'grid' == this.view ) {
+                params = { ...params , ...{ _grid : page || 1, } };
             }
 
 
@@ -147,11 +152,16 @@
 
             _this.triggerHook( 'beforeUpdate' );
             $.ajax( {
-                url: this.source + '&_view=' + _this.view + '&' + '&_supertag=' + _this.target.dataset.supertag + '&' + new URLSearchParams(params).toString(),
+                url: this.source + 
+                        '&_view=' + _this.view + 
+                        '&_supertag=' + _this.target.dataset.supertag + 
+                        '&' + new URLSearchParams(params).toString(),
                 method: 'GET',
                 dataType: 'html',
-            } ).done( function( html ) {
-                _this.renderListingContent( html );
+            } ).done( function( data ) {
+                data = JSON.parse(data);
+                _this.renderListingContent( data.listing );
+                _this.renderPaginationContent( data.pagination );
                 _this.updatePushURL(params);
                 _this.triggerHook( 'afterUpdate' );
             });
@@ -278,6 +288,10 @@
             }
         },
 
+        renderPaginationContent: function( html ) {
+            this.pagination.innerHTML = html;
+        },
+
         handleEmptyListings: function() {
             this.renderListingContent( this.listing.innerHTML );
         },
@@ -300,7 +314,7 @@
             return values;
         },
 
-        pagination: function( event ) {
+        handlePaginationClick: function( event ) {
 
             if (event.target.classList.contains( 'event-page' ) ) {
                 event.preventDefault();
