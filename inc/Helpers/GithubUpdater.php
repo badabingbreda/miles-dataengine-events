@@ -116,21 +116,22 @@ class GithubUpdater {
 	        if( is_array( $response ) ) {
 	        	// Get the first item
 	            $response = current( $response );
+
+				// Is there an access token?
+				if( $this->authorize_token ) {
+					// Update our zip url with token
+					$response['zipball_url'] = add_query_arg( 'access_token', $this->authorize_token, $response['zipball_url'] );
+				}
+	
+				// try to get metadata from the release body
+				$metadata = $this->get_tmpfile_data( $response['body']);
+	
+				// merge the data with the response
+				$response = array_merge( $response, $metadata);
+	
+				// Set it to our property
+				$this->github_response = $response;
 	        }
-	        // Is there an access token?
-	        if( $this->authorize_token ) {
-	        	// Update our zip url with token
-	            $response['zipball_url'] = add_query_arg( 'access_token', $this->authorize_token, $response['zipball_url'] );
-	        }
-
-			// try to get metadata from the release body
-			$metadata = $this->get_tmpfile_data( $response['body']);
-
-			// merge the data with the response
-			$response = array_merge( $response, $metadata);
-
-	        // Set it to our property
-	        $this->github_response = $response;
 	        return $response;
 	    }
 
