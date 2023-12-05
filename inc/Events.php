@@ -856,7 +856,12 @@ class Events {
 					'value' => date('Ymd'),
 					'compare' => '>=',
 					'type' => 'DATE',
-				]
+				],
+				'event_is_active_clause' => [
+					'key' => 'active',
+					'value' => 1,
+					'compare' => '=',
+				],				
 			],
 			'fields' => 'ids',
 		];
