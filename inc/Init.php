@@ -20,7 +20,7 @@ class Init {
      */
     public static function init_updater() {
         $updater = new GithubUpdater( DATAENGINEEVENTS_FILE );
-        $updater->set_username( 'badabing' );
+        $updater->set_username( 'badabingbreda' );
         $updater->set_repository( 'miles-dataengine-events' );
         $updater->set_settings( array(
                     'requires'			=> '5.1',
