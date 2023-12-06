@@ -195,6 +195,7 @@ class Events {
 			],
 			$atts
 		);
+
 		
 		// get url params for later use, override certain settings with shortcode settings
 		self::get_settings( [ 
@@ -213,7 +214,8 @@ class Events {
 		
 		// There are NO RESULTS whatsoever found in the database
 		// we can skip all the filters because none will work.
-		if ( $events === false ) return self::no_events_found();
+		if ( $events === false ) return self::no_events_found()[ 'listing' ];
+
 
 		// get all tags from the events
 		if ($events) {
