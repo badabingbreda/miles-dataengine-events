@@ -331,12 +331,16 @@ class Events {
 						var dataengine_map_events = {$json_event_map};
 					</script>
 					<template id="month-no-results">
-						<h2>Sorry, there are no results matching your search criteria for this month</h2>
-						<p>Please try another search to find what you're looking for.</p>
+						<div class="no-event-search-results">
+							<h3>Sorry, there are no results matching your search criteria for this month</h3>
+							<p>Please try another search to find what you're looking for.</p>
+						</div>
 					</template>
 					<template id="paged-no-results">
-						<h2>Sorry, there are no results matching your search criteria</h2>
-						<p>Please try another search to find what you're looking for.</p>
+						<div class="no-event-search-results">
+							<h3>Sorry, there are no results matching your search criteria</h3>
+							<p>Please try another search to find what you're looking for.</p>
+						</div>
 					</template>
 					<template id="filter_list_item">
 						<button class="filter-list-item-remove" data-value="{{value}}" data-type="{{type}}">
@@ -516,8 +520,10 @@ class Events {
 	private static function no_events_found() {
 
 		$return = <<<EOT
-			<h2>Sorry, no upcoming events.</h2>
-			<p>Please check back again in the future!</p>
+			<div class="no-events-message">
+			    <h2>Sorry, there are no upcoming events.</h2>
+			    <strong>Please check back again in the future!</strong>
+			</div>
 		EOT;
 
 		return [
@@ -633,14 +639,19 @@ class Events {
 
 		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F j, Y' );
 
+		$thumbnail_img = '';  // Initialize to empty string
+		if (!empty($event['thumbnail_url'])) {
+			$thumbnail_img = "<img src='{$event['thumbnail_url']}' alt=''>";
+		}
 
 		$item = <<<EOT
 		<div class="event-list-details">
-				<div class="event-list-date-time">{$nice_date}<br>{$event_time}</div>
-				<a class="event-list-info" href="{$event['permalink']}">
-					<h3 class="event-title">{$event['post_title']}</h3>
-					<small class="event-city">{$event['city']}, {$event['state']}</small>
-				</a>
+			<div class="event-list-thumbnail">{$thumbnail_img}</div>
+			<div class="event-list-date-time">{$nice_date}<br>{$event_time}</div>
+			<a class="event-list-info" href="{$event['permalink']}">
+				<h3 class="event-title">{$event['post_title']}</h3>
+				<small class="event-city">{$event['city']}, {$event['state']}</small>
+			</a>
 		</div>
 		EOT;
 
@@ -661,7 +672,7 @@ class Events {
 		
 		$heading = <<<EOT
 			<tr data-date="{$date}">
-				<th colspan="2">
+				<th colspan="3">
 					<span class="month-day-date">{$nice_date}</span> <span class="weekday">{$weekday}</span>
 				</th>
 			</tr>
@@ -684,9 +695,17 @@ class Events {
 		if ($event[ 'start_time_pm' ] && $event[ 'end_time_pm' ] ) {
 			$event_time = $event[ 'start_time_pm' ] . ' - ' . $event[ 'end_time_pm' ];
 		}
+		
+		$thumbnail_img = '';  // Initialize to empty string
+		if (!empty($event['thumbnail_url'])) {
+			$thumbnail_img = "<img src='{$event['thumbnail_url']}' alt=''>";
+		}
 
 		$item = <<<EOT
 		<tr>
+			<td class="list-event-thumbnail">
+				{$thumbnail_img}
+			</td>
 			<td class="list-event-time">
 				{$event_time}
 			</td>
@@ -961,6 +980,10 @@ class Events {
 		$event_dates = array_filter( $event_dates, function( $instance ) { return self::reformat($instance[ 'event_date' ]) >= date( 'Ymd' ); }  );
 		
 		foreach ($event_dates as $instance ) {
+			
+			// Get the thumbnail URL from the first row of the 'photo' repeater field
+			$photo_repeater = get_field('photos', $post_id);
+			$thumbnail_url = $photo_repeater ? $photo_repeater[0]['profile_full'] : '';
 
 			// add a sort date with time so we can sort them with start time
 			// assume 00:00:00 when no start time is given so these display first
@@ -979,6 +1002,7 @@ class Events {
 						'zip' => 			self::val_or_array_first(\get_post_meta( $post_id , 'zip' , true )),
 						'latitude' => 		\get_post_meta( $post_id , 'latitude' , true ),
 						'longitude' => 		\get_post_meta( $post_id , 'longitude' , true ),
+						'thumbnail_url' =>	$thumbnail_url,
 						'type' =>			\array_map( function( $tag ) { return $tag[ 'supertag' ]; } , \get_field( 'supertags' , $post_id ) ),
 						'city_tag' =>		[ self::val_or_array_first(\get_post_meta( $post_id , 'city' , true )) ],			// treat this as a tag/taxonomy so we can filter it
 						'start_time_pm' => 	$instance[ 'start_time' ] ? self::to_pm( $instance[ 'start_time' ]) : '',			// time already converted to AM/PM
