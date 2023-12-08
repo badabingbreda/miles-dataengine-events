@@ -261,6 +261,8 @@ class Events {
 	
 		}
 
+		$json_event_map = json_encode( $data[ 'map' ]);
+
 		$lowerbound = date( 'Ym' );		// get lower bound, disable prev button
 		$upperbound = self::reformat( $last[ 'sort_date' ] , 'Ymd' , 'Ym' );
 
@@ -325,6 +327,9 @@ class Events {
 					<div id="pagination">
 						{$data['pagination']}
 					</div>
+					<script>
+						var dataengine_map_events = {$json_event_map};
+					</script>
 					<template id="month-no-results">
 						<h2>Sorry, there are no results matching your search criteria for this month</h2>
 						<p>Please try another search to find what you're looking for.</p>
@@ -342,7 +347,8 @@ class Events {
 				<script>
 					(function($) { 
 						$(document).ready( function() {
-							new DataEngineEvents({ id : "{$atts[ 'id' ]}" , view: "{$atts[ 'view' ]}" });
+							if ( typeof window.data_engine_events == 'undefined' ) window.data_engine_events = [];
+							window.data_engine_events[ "{$atts[ 'id' ]}" ] = new DataEngineEvents({ id : "{$atts[ 'id' ]}" , view: "{$atts[ 'view' ]}" });
 						});
 					})(jQuery);
 				</script>
@@ -359,6 +365,7 @@ class Events {
 
 		// use an array to build listing
 		$event_list = [];
+		$event_map = [];
 
 		// no need to return anything if on first request there are no events
 		if ( sizeof( $events ) == 0 ) return '';
@@ -372,6 +379,8 @@ class Events {
 
 		foreach ($events[ $page - 1 ] as $event ) {
 			$event_list[] = self::render_paged_list_item( $event );
+			// get markers/make sure they're not already in the array
+			$event_map = self::maybe_add_to_map_list( $event_map , $event );
 		}
 		// render the chunck of events
 		$listings = implode( '', $event_list );
@@ -384,8 +393,9 @@ class Events {
 		}
 
 		return [
-			'listing' => apply_filters( 'dataengine-events/paged/render' , $listings , self::$settings ),
+				'listing' => apply_filters( 'dataengine-events/paged/render' , $listings , self::$settings ),
 				'pagination' => $pagination,
+				'map' => $event_map,
 			];
 
 	}
@@ -400,9 +410,13 @@ class Events {
 
 		// use an array to build listing
 		$event_list = [];
+		$event_map = [];
 
 		foreach ($events as $event ) {
 			$event_list[] = self::render_month_list_item( $event );
+			// get markers/make sure they're not already in the array
+			$event_map = self::maybe_add_to_map_list( $event_map , $event );
+
 		}
 
 		// render the chunck of events
@@ -416,6 +430,7 @@ class Events {
 		return [
 			'listing' => apply_filters( 'dataengine-events/month/render' , $listings , self::$settings ),
 			'pagination' => $pagination,
+			'map' => $event_map,
 		];
 		
 	}
@@ -431,6 +446,7 @@ class Events {
 
 		// use an array to build listing
 		$event_list = [];
+		$event_map = [];
 
 		// no need to return anything if on first request there are no events
 		if ( sizeof( $events ) == 0 ) return '';
@@ -444,6 +460,9 @@ class Events {
 
 		foreach ($events[ $grid - 1 ] as $event ) {
 			$event_list[] = self::render_grid_list_item( $event );
+			// get markers/make sure they're not already in the array
+			$event_map = self::maybe_add_to_map_list( $event_map , $event );
+
 		}
 		// render the chunck of events
 		$listings = implode( '', $event_list );
@@ -457,6 +476,8 @@ class Events {
 		return [
 			'listing' => apply_filters( 'dataengine-events/grid/render' , $listings , self::$settings ),
 			'pagination' => $pagination,
+			'map' => $event_map,
+
 		];
 
 	}
@@ -747,6 +768,30 @@ class Events {
 		$view = self::$settings[ 'view' ];
 
 		return apply_filters( "dataengine-events/pagination/{$view}" , $return , $all_events , $current );
+	}
+	
+	/**
+	 * maybe_add_to_map_list
+	 * 
+	 * get the current unique events and a new event that need to be added as markers on the map
+	 * if the new event isn't already in the array, add it.
+	 * Return either way.
+	 *
+	 * @param  mixed $event_map
+	 * @param  mixed $event
+	 * @return void
+	 */
+	private static function maybe_add_to_map_list( $event_map , $event ) {
+		if ( !in_array( $event[ 'ID' ] , array_keys( $event_map ) ) ) {
+			$event_map[ $event[ 'ID' ] ] = [
+				'ID'=> $event[ 'ID' ],
+				'title' => $event[ 'post_title' ],
+				'permalink' => $event[ 'permalink' ],
+				'lat' => $event[ 'latitude' ],
+				'lng' => $event[ 'longitude' ],
+			];
+		}
+		return $event_map;
 	}
 		
 	/**

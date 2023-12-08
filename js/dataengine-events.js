@@ -43,6 +43,8 @@
             this.settings.upperbound = this.target.dataset?.upperbound || null;
             this.settings.lowerbound = this.target.dataset?.lowerbound || null;
 
+            this.data = null;   // last returned data
+
             this.setMonthNavigation();
 				
 			this.toggleFacetOptions();
@@ -160,6 +162,7 @@
                 dataType: 'html',
             } ).done( function( data ) {
                 data = JSON.parse(data);
+                _this.data = data;
                 _this.renderListingContent( data.listing );
                 _this.renderPaginationContent( data.pagination );
                 _this.updatePushURL(params);
