@@ -225,13 +225,18 @@ class Events {
 			}
 		}
 
+		if ( defined( 'DATAENGINE_EVENTS_MAPSAPI' )) {
+			// only add the events_map if we have a mapsapi key
+			$events_map = self::generate_map();
+			$events_map_button = '<a href="#" class="switch-mapview" data-view="map">Map View</a>';
+		} else {
+			$events_map = '';
+			$events_map_button = '';
+		}
 
 		$city_tag = self::clean_array( $city_tag );
 		$type_tag = self::clean_array( $type_tag );
 		
-		// $city_tag_control = self::dropdown( $city_tag , '_city' , 'City' );
-		// $type_tag_control = self::dropdown( $type_tag , '_type' , 'Event Type' );
-
 		$city_tag_control = self::multiselect( $city_tag , '_city' , 'City' );
 		$type_tag_control = self::multiselect( $type_tag , '_type' , 'Event Type' );
 
@@ -273,6 +278,7 @@ class Events {
 		<div id="switch_view" data-current="{$atts['view']}">
 			<a href="#" class="switch-view switch-view-paged" data-view="paged">List View</a>
 			<a href="#" class="switch-view switch-view-month" data-view="month">Month List</a>
+			{$events_map_button}
 		</div>
 		EOT : '');
 
@@ -294,6 +300,8 @@ class Events {
 					data-month="{$month}"
 					data-lowerbound="{$lowerbound}"
 					data-upperbound="{$upperbound}" 
+					data-mapview="false"
+					data-mapviewlatest="false"
 					class="dataengine-events-container">
 					<div id="filter-sidebar" class="event-filters">
 						<div id="filter_list">
@@ -324,10 +332,13 @@ class Events {
 					<div id="listing">
 						{$data['listing']}
 					</div>
+					<div id="event-map-container" class="map-container">
+						{$events_map}
+					</div>
 					<div id="pagination">
 						{$data['pagination']}
 					</div>
-					<script>
+					<script style="text/javascript">
 						var dataengine_map_events = {$json_event_map};
 					</script>
 					<template id="month-no-results">
@@ -643,7 +654,7 @@ class Events {
 		if (!empty($event['thumbnail_url'])) {
 			$thumbnail_img = "<img src='{$event['thumbnail_url']}' alt=''>";
 		}
-
+		
 		$item = <<<EOT
 		<div class="event-list-details">
 			<div class="event-list-thumbnail">{$thumbnail_img}</div>
@@ -872,6 +883,20 @@ class Events {
 			<input type="text" value="{$value}" placeholder="Search" />
 		EOT;
 	}
+	
+	/**
+	 * generate map
+	 *
+	 *
+	 */
+	private static function generate_map() {
+		return <<<EOL
+			<div class='wrap'>
+				<div class='acf-map'></div>
+			</div>
+		EOL;
+	}
+
 		
 	/**
 	 * clean_array

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" id="icon-map-pin" viewBox="0 0 30.009 46.643">
+  <defs>
+    <filter id="dropshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1"></feGaussianBlur>
+      <feOffset dx=".5" dy=".5" result="offsetblur"></feOffset>
+      <!-- Reduce opacity -->
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.25"></feFuncA>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#dropshadow)" transform="translate(-657 -2781.92)">
+    <circle cx="8" cy="8" r="8" fill="#f1e7db" transform="translate(664 2789)"></circle>
+    <path fill="#823235" d="M685.125 2788.286c-3.725-5.086-8.207-6.049-12.092-6.324-3.922-.275-9.721.75-13.187 4.516-2.758 2.997-3.446 8.983-2.346 12.737a57.552 57.552 0 0 0 2.321 5.317c2.508 4.129 5.743 11.748 8.107 17.3.719 1.683 1.357 3.19 1.883 4.373s1.251 2.483 2.39 2.346a1.524 1.524 0 0 0 .169.006c1.045 0 1.733-1.239 2.221-2.352a215.35 215.35 0 0 0 1.97-4.673c2.127-5.117 5.036-12.123 7.5-16.583a37.386 37.386 0 0 0 1.526-3.466c.169-.425.332-.826.388-.926 1.827-4.16 1.038-9.7-.851-12.273m-9.545 10.787c-.394.751-2.014 1.176-2.627 1.226a8.43 8.43 0 0 1-.682.031 4.016 4.016 0 0 1-4.091-2.584 4.859 4.859 0 0 1 .863-5.148 5.529 5.529 0 0 1 2.521-.932l.237-.044a3.49 3.49 0 0 1 2.54.494 4.745 4.745 0 0 1 .6.457 4.627 4.627 0 0 1 1.458 3.3 6.613 6.613 0 0 1-.819 3.2"></path>
+  </g>
+</svg>
