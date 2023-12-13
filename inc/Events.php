@@ -277,7 +277,7 @@ class Events {
 		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOT
 		<div id="switch_view" data-current="{$atts['view']}">
 			<a href="#" class="switch-view switch-view-paged" data-view="paged">List View</a>
-			<a href="#" class="switch-view switch-view-month" data-view="month">Month List</a>
+			<a href="#" class="switch-view switch-view-month" data-view="month">Monthly View</a>
 			{$events_map_button}
 		</div>
 		EOT : '');

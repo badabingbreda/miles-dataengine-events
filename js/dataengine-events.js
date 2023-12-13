@@ -377,24 +377,21 @@
         event.preventDefault();
         // if we are switching from mapview, simply toggle
         if ( this.target.dataset.mapview == 'true' ) {
-
           this.switchMapView( false );
+        } 
 
-        } else {
+        if ( this.target.dataset.view == event.target.dataset.view ) return;
 
-          this.view = event.target.dataset.view;
-          this.target.dataset.view = this.view;
+        this.view = event.target.dataset.view;
+        this.target.dataset.view = this.view;
 
-          // Reset filters if switching to month view
-          if (this.view === "month") {
-            this.resetFilters();
-          }
-
-          this.switchMapView( false );
-          this.setMonthNavigation();
-          this.collectTimed();
-
+        // Reset filters if switching to month view
+        if (this.view === "month") {
+          this.resetFilters();
         }
+
+        this.setMonthNavigation();
+        this.collectTimed();
 
       }
     },
