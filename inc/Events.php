@@ -76,6 +76,8 @@ class Events {
 		$_city = filter_input( INPUT_GET , '_city' );
 		$_type = filter_input( INPUT_GET , '_type' );
 		$_keyword = filter_input( INPUT_GET , '_keyword' );
+		$_startdate = filter_input( INPUT_GET , '_startdate' );
+		$_enddate = filter_input( INPUT_GET , '_enddate' );
 		$_page = filter_input( INPUT_GET , '_page' , FILTER_SANITIZE_NUMBER_INT );
 		$_month = filter_input( INPUT_GET , '_month' , FILTER_SANITIZE_NUMBER_INT );
 		$_grid = filter_input( INPUT_GET , '_grid' , FILTER_SANITIZE_NUMBER_INT );
@@ -87,6 +89,8 @@ class Events {
 			'city' => $_city,
 			'type' => $_type,
 			'keyword' => $_keyword ? strtolower( $_keyword ) : null,
+			'startdate' => $_startdate ? $_startdate : null,
+			'enddate' => $_enddate ? $_enddate : null,
 			'page' => ($_page > 0 ? $_page : 1),				// use 1 if not set or zero
 			'month' => $_month ? $_month : date( 'Ym' ),		// use current month if not set
 			'grid' => ($_grid > 0 ? $_grid : 1),				// use 1 if not set or zero
@@ -123,6 +127,8 @@ class Events {
 		$_city = self::$settings['city'] ? explode(',',self::$settings['city']) : [];
 		$_type = self::$settings['type'] ? explode(',',self::$settings['type']) : [];
 		$keyword = self::$settings[ 'keyword' ];
+		$startdate = self::$settings[ 'startdate' ];
+		$enddate = self::$settings[ 'enddate' ];
 
 		// filter if city is set
 		if (sizeof($_city)>0) {
@@ -160,6 +166,23 @@ class Events {
 				||
 			'grid' == self::$settings['view']
 		) {
+
+			// filter the events to startdate and enddate
+			if ( self::$settings[ 'startdate' ] && self::$settings[ 'enddate' ] ) {
+
+				$events = array_filter(
+					$events,
+					function( $event ) use ( $startdate , $enddate ) {
+
+						$useable_startdate = self::reformat( $startdate , 'm/d/Y' , 'Ymd' );
+						$useable_enddate = self::reformat( $enddate , 'm/d/Y' , 'Ymd' );
+						return 
+							$event[ 'sort_date' ] >= $useable_startdate 
+							&& 
+							$event[ 'sort_date' ] <= $useable_enddate;
+					}
+				);
+			}
 			// slice to the pagination
 			$events = array_chunk( $events , self::$settings['per_page'] , true );
 		} 
@@ -274,6 +297,8 @@ class Events {
 		$month = self::$settings['month'];
 		$view = self::$settings[ 'view' ];
 
+		$daterange_picker = self::picker_with_dates();
+
 		$switch_view = ('true' == $atts[ 'switch' ] ? <<<EOT
 		<div id="switch_view" data-current="{$atts['view']}">
 			<a href="#" class="switch-view switch-view-paged" data-view="paged">List View</a>
@@ -327,6 +352,7 @@ class Events {
 							<a href="#" class="previous nav-month"><span class="sr-only">Previous Month</span></a>
 							<a href="#" class="next nav-month"><span class="sr-only">Next Month</span></a>
 						</nav>
+						{$daterange_picker}
 						{$switch_view}
 					</div>
 					<div id="listing">
@@ -368,6 +394,21 @@ class Events {
 					})(jQuery);
 				</script>
 		EOT;
+	}
+	
+	/**
+	 * picker_with_dates
+	 * 
+	 * return the datepicker element with picker dates, based on get parameters if needed
+	 *
+	 * @return void
+	 */
+	private static function picker_with_dates() {
+
+		$start_date = date( 'm/d/Y' );
+		$end_date = date( 'm/d/Y', strtotime( '+1 year' ) );
+
+		return '<input type="text" name="daterange" value="'.$start_date.' - '. $end_date .'" />';;
 	}
 	
 	/**
