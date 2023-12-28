@@ -162,11 +162,16 @@
       };
 
       if (this.settings.daterangepicker && this.view == 'paged' ) {
-        params = {
-          ...params,
-          ...{
-            _startdate: $('input[name="daterange"]').data('daterangepicker').startDate.format( 'MM/DD/YYYY' ).toString(),
-            _enddate: $('input[name="daterange"]').data('daterangepicker').endDate.format( 'MM/DD/YYYY' ).toString(),
+        let startdate = $('input[name="daterange"]').data('daterangepicker').startDate.format( 'MM/DD/YY' ).toString();
+        let enddate = $('input[name="daterange"]').data('daterangepicker').endDate.format( 'MM/DD/YY' ).toString();
+        // only add if either start or enddate has changed
+        if ( startdate !== DATAENGINEEVENTS.mindate || enddate !== DATAENGINEEVENTS.defaultenddate ) {
+          params = {
+            ...params,
+            ...{
+              _startdate: startdate,
+              _enddate: enddate,
+            }
           }
         }
       }
@@ -243,6 +248,9 @@
         if (type == "keyword") {
           // remove keyword value
           this.keyword.value = "";
+        } else if ( type== "startdate" ) {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
         } else {
           // Disable the item in the list
           this[type + "tag"].forEach((elem) => {
@@ -300,6 +308,7 @@
           this.filter_list.appendChild(newTag);
         });
 
+        // if keyword is entered add it to list
         if (this.keyword && this.keyword.value !== "") {
           var newTag = this.createElement(
             list_item_template,
@@ -310,6 +319,26 @@
           this.filter_list.appendChild(newTag);
         }
 
+        if ( this.settings.daterangepicker ) {
+
+          // add daterange tag
+          let startdate = $('input[name="daterange"]').data('daterangepicker').startDate.format( 'MM/DD/YY' ).toString();
+          let enddate = $('input[name="daterange"]').data('daterangepicker').endDate.format( 'MM/DD/YY' ).toString();
+
+          if ( startdate !== DATAENGINEEVENTS.mindate || enddate !== DATAENGINEEVENTS.defaultenddate ) {
+            var newTag = this.createElement(
+              list_item_template,
+              "startdate",
+              "",
+              startdate + ' - ' + enddate
+            );
+
+            this.filter_list.appendChild(newTag);
+
+          }
+  
+        }
+        
         // Show or hide the filter_list based on its content
         if (this.filter_list.childNodes.length > 0) {
           this.filter_list.style.display = "block";
@@ -334,26 +363,49 @@
 
       let $this = this;
 
-      // set daterange to true
-      this.settings.daterangepicker = true;
-
-      $(  function() {
+      
+      $( function() {
+        // set daterange to true
+        $this.settings.daterangepicker = true;
         // init the picker
-        $( 'input[name="daterange"]' ).daterangepicker({ minDate: DATAENGINEEVENTS.mindate, autoApply: true });
+        $( 'input[name="daterange"]' ).daterangepicker({ 
+          minDate: DATAENGINEEVENTS.mindate, 
+          autoApply: false, 
+          opens: 'center',
+          locale: {
+            format: 'MM/DD/YY',
+            cancelLabel: 'Clear',
+          } 
+        });
         // set startdate
         if ( DATAENGINEEVENTS.startdate ) {
           $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.startdate );
+        } else {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
         }
         // set enddate
         if ( DATAENGINEEVENTS.enddate ) {
           $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.enddate );
+        } else {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
         }
+        // update the filtertags so it adds the buttons
+        $this.filterTagsUpdate();
       });
 
 
       // add an event to the apply button of the daterange
       $( 'input[name="daterange"]' ).on( 'apply.daterangepicker' , this.daterangepickerApply.bind(this) );
+      $( 'input[name="daterange"]' ).on( 'keyup' , this.daterangepickerKeyup.bind(this) );
+      $('input[name="daterange"]').on('cancel.daterangepicker', this.daterangepickerClear.bind(this));      
 
+    },
+
+    daterangepickerClear: function(ev, picker) {
+      //do something, like clearing an input
+      $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
+      $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
+      this.daterangepickerApply();
     },
 
     /**
@@ -369,6 +421,13 @@
           this.target.querySelector( '.switch-view-paged' ).click();
         }
         this.collectTimed(null);
+    },
+
+    daterangepickerKeyup: function( event ) {
+
+      if ( event.key === 'Enter' ) {
+        this.daterangepickerApply();
+      }
     },
 
     renderListingContent: function (html) {

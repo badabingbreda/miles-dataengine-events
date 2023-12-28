@@ -1,6 +1,8 @@
 <?php
 namespace DataEngineEvents\Helpers;
 
+use DataEngineEvents\Events;
+
 class StyleScript {
 
     public function __construct() {
@@ -35,12 +37,20 @@ class StyleScript {
         if ( defined( 'DATAENGINE_EVENTS_MAPSAPI' ) ) {
             wp_enqueue_script( 'google-api', 'https://maps.googleapis.com/maps/api/js?key=' . DATAENGINE_EVENTS_MAPSAPI , null, null, true); // Add in your key
         }
+
+        $events = Events::get_events();
+
+        $latest_date = array_pop($events)['sort_date']; // get the latest date on any event so we can set the daterangepicker
+
+
         // localize our script so we know where the assets are located and the admin_ajax script. Also if we can use the mapsapi
         wp_localize_script( 'dataengine-events', 'DATAENGINEEVENTS', array( 
             'admin_ajax' => \admin_url( 'admin-ajax.php' ),
             'mapsapi' => ( defined( 'DATAENGINE_EVENTS_MAPSAPI' ) ? true : false),
             'plugindir' => DATAENGINEEVENTS_URL,
-            'mindate' => date( 'm/d/Y' ),       // earliest selectable date for the daterangepicker
+            'mindate' => date( 'm/d/y' ),       // earliest selectable date for the daterangepicker
+            'defaultenddate' => Events::reformat( $latest_date , 'Ymd' , 'm/d/y' ),//date( 'm/d/y', strtotime( '+1 year' ) ),       // earliest selectable date for the daterangepicker
+
             'startdate' => filter_input( INPUT_GET , '_startdate' ),
             'enddate' => filter_input( INPUT_GET , '_enddate' ),
             ) );

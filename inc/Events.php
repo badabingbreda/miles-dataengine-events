@@ -174,8 +174,8 @@ class Events {
 					$events,
 					function( $event ) use ( $startdate , $enddate ) {
 
-						$useable_startdate = self::reformat( $startdate , 'm/d/Y' , 'Ymd' );
-						$useable_enddate = self::reformat( $enddate , 'm/d/Y' , 'Ymd' );
+						$useable_startdate = self::reformat( $startdate , 'm/d/y' , 'Ymd' );
+						$useable_enddate = self::reformat( $enddate , 'm/d/y' , 'Ymd' );
 						return 
 							$event[ 'sort_date' ] >= $useable_startdate 
 							&& 
@@ -289,7 +289,7 @@ class Events {
 	
 		}
 
-		$json_event_map = json_encode( $data[ 'map' ]);
+		$json_event_map = isset( $data['map'] ) ? json_encode( $data[ 'map' ] ) : json_encode([]);
 
 		$lowerbound = date( 'Ym' );		// get lower bound, disable prev button
 		$upperbound = self::reformat( $last[ 'sort_date' ] , 'Ymd' , 'Ym' );
@@ -332,6 +332,13 @@ class Events {
 						<div id="filter_list">
 						</div>
 						<p>Filter By:</p>
+						<div id="date_range" class="event-facet">
+							<button class="facet-toggle"> <h4 class="facet-title">Date Range</h4><span class="facet-toggle-sign">+</span> </button>
+							<fieldset>
+								<legend class="sr-only">Date Range</legend>
+								{$daterange_picker}
+							</fieldset>
+						</div>
 						<div id="city_tag" class="event-facet">
 							<button class="facet-toggle"> <h4 class="facet-title">City</h4><span class="facet-toggle-sign">+</span> </button>
 							<fieldset>
@@ -352,7 +359,6 @@ class Events {
 							<a href="#" class="previous nav-month"><span class="sr-only">Previous Month</span></a>
 							<a href="#" class="next nav-month"><span class="sr-only">Next Month</span></a>
 						</nav>
-						{$daterange_picker}
 						{$switch_view}
 					</div>
 					<div id="listing">
@@ -405,10 +411,10 @@ class Events {
 	 */
 	private static function picker_with_dates() {
 
-		$start_date = date( 'm/d/Y' );
-		$end_date = date( 'm/d/Y', strtotime( '+1 year' ) );
+		// $start_date = date( 'm/d/y' );
+		// $end_date = date( 'm/d/y', strtotime( '+1 year' ) );
 
-		return '<input type="text" name="daterange" value="'.$start_date.' - '. $end_date .'" />';;
+		return '<input type="text" name="daterange" value="" />';;
 	}
 	
 	/**
@@ -1131,7 +1137,7 @@ class Events {
 	/**
 	 * reformat our date field so we can compare with useable formats
 	 */
-	protected static function reformat( $date_input , $format_in = 'd/m/Y' , $format_out = 'Ymd' ) {
+	public static function reformat( $date_input , $format_in = 'd/m/Y' , $format_out = 'Ymd' ) {
 		/*
 		*  Create PHP DateTime object from Date Picker Value
 		*  this example expects the value to be saved in the format: yymmdd (JS) = Ymd (PHP)
