@@ -17,6 +17,7 @@
         view: this.settings?.view || "paged", // set the view type for the listing container(s)
         mapdata: this.setting?.mapdata || "dataengine_map_events", // variablename that will hold map object
         rendermap: false, // render the map by calling out to the API
+        daterangepicker: false, // if daterange is enabled. Needed to know if we must get startdate and enddate
       };
 
       this.target = document.querySelector("#" + this.settings.id);
@@ -57,6 +58,10 @@
       this.addHook("afterInit", this.currentMonthHeader.bind(this));
       this.addHook("afterInit", this.handleEmptyListings.bind(this));
       this.addHook("afterInit", this.filterTagsUpdate.bind(this));
+      if ( this.target.querySelector( '[name="daterange"]') ) {
+        // init the daterangfe
+        this.addHook( "afterInit", this.datarangeEnable.bind(this) );
+      }
       this.addHook("beforeCollect", this.currentMonthHeader.bind(this));
 
       // add and remove updating class
@@ -97,9 +102,14 @@
         );
 
       // if there's a mapsapi configured, add an eventlistener so we can switch to map view (without an ajax call)
-      if (DATAENGINEEVENTS.mapsapi)
-		this.settings.rendermap = true;
+      if (DATAENGINEEVENTS.mapsapi) {
+		    this.settings.rendermap = true;
         this.target.addEventListener("click", this.mapViewHandler.bind(_this));
+        // disable pointer-events so we see a hand when we hover over something
+        // the events are added using css when switching mapview
+        this.map.style.pointerEvents = this.target.dataset.mapview == "true" ? "all" : "none";      
+      }
+
     },
 
     /**
@@ -150,6 +160,21 @@
         // _city : this.target.querySelector( '#city_tag select' ).value,
         // _type : this.target.querySelector( '#type_tag select' ).value,
       };
+
+      if (this.settings.daterangepicker && this.view == 'paged' ) {
+        let startdate = $('input[name="daterange"]').data('daterangepicker').startDate.format( 'MM/DD/YY' ).toString();
+        let enddate = $('input[name="daterange"]').data('daterangepicker').endDate.format( 'MM/DD/YY' ).toString();
+        // only add if either start or enddate has changed
+        if ( startdate !== DATAENGINEEVENTS.mindate || enddate !== DATAENGINEEVENTS.defaultenddate ) {
+          params = {
+            ...params,
+            ...{
+              _startdate: startdate,
+              _enddate: enddate,
+            }
+          }
+        }
+      }
 
       if ("paged" == this.view) {
         params = { ...params, ...{ _page: page || 1 } };
@@ -223,6 +248,9 @@
         if (type == "keyword") {
           // remove keyword value
           this.keyword.value = "";
+        } else if ( type== "startdate" ) {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
         } else {
           // Disable the item in the list
           this[type + "tag"].forEach((elem) => {
@@ -280,6 +308,7 @@
           this.filter_list.appendChild(newTag);
         });
 
+        // if keyword is entered add it to list
         if (this.keyword && this.keyword.value !== "") {
           var newTag = this.createElement(
             list_item_template,
@@ -290,6 +319,26 @@
           this.filter_list.appendChild(newTag);
         }
 
+        if ( this.settings.daterangepicker ) {
+
+          // add daterange tag
+          let startdate = $('input[name="daterange"]').data('daterangepicker').startDate.format( 'MM/DD/YY' ).toString();
+          let enddate = $('input[name="daterange"]').data('daterangepicker').endDate.format( 'MM/DD/YY' ).toString();
+
+          if ( startdate !== DATAENGINEEVENTS.mindate || enddate !== DATAENGINEEVENTS.defaultenddate ) {
+            var newTag = this.createElement(
+              list_item_template,
+              "startdate",
+              "",
+              startdate + ' - ' + enddate
+            );
+
+            this.filter_list.appendChild(newTag);
+
+          }
+  
+        }
+        
         // Show or hide the filter_list based on its content
         if (this.filter_list.childNodes.length > 0) {
           this.filter_list.style.display = "block";
@@ -307,8 +356,82 @@
       this.target.classList.remove("updating");
     },
 
+    /**
+     * init the daterangepicker library and update start- and enddate
+     */
+    datarangeEnable: function() {
+
+      let $this = this;
+
+      
+      $( function() {
+        // set daterange to true
+        $this.settings.daterangepicker = true;
+        // init the picker
+        $( 'input[name="daterange"]' ).daterangepicker({ 
+          minDate: DATAENGINEEVENTS.mindate, 
+          autoApply: false, 
+          opens: 'center',
+          locale: {
+            format: 'MM/DD/YY',
+            cancelLabel: 'Clear',
+          } 
+        });
+        // set startdate
+        if ( DATAENGINEEVENTS.startdate ) {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.startdate );
+        } else {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
+        }
+        // set enddate
+        if ( DATAENGINEEVENTS.enddate ) {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.enddate );
+        } else {
+          $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
+        }
+        // update the filtertags so it adds the buttons
+        $this.filterTagsUpdate();
+      });
+
+
+      // add an event to the apply button of the daterange
+      $( 'input[name="daterange"]' ).on( 'apply.daterangepicker' , this.daterangepickerApply.bind(this) );
+      $( 'input[name="daterange"]' ).on( 'keyup' , this.daterangepickerKeyup.bind(this) );
+      $('input[name="daterange"]').on('cancel.daterangepicker', this.daterangepickerClear.bind(this));      
+
+    },
+
+    daterangepickerClear: function(ev, picker) {
+      //do something, like clearing an input
+      $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setStartDate( DATAENGINEEVENTS.mindate );
+      $( 'input[name="daterange"]' ).data( 'daterangepicker' ).setEndDate( DATAENGINEEVENTS.defaultenddate );
+      this.daterangepickerApply();
+    },
+
+    /**
+     * daterangepickerApply
+     * when autoapplying, collect the params
+     * 
+     * @param {*} ev 
+     * @param {*} picker 
+     */
+    daterangepickerApply: function(ev,picker) {
+        if ( this.view !== 'paged' ) {
+          // switch to paged view by triggering a click
+          this.target.querySelector( '.switch-view-paged' ).click();
+        }
+        this.collectTimed(null);
+    },
+
+    daterangepickerKeyup: function( event ) {
+
+      if ( event.key === 'Enter' ) {
+        this.daterangepickerApply();
+      }
+    },
+
     renderListingContent: function (html) {
-      if (html.trim() == "") {
+      if ( typeof html == 'undefined' || html.trim() == "" ) {
         this.triggerHook("listingNoResults", this.view);
         if ("month" == this.view) {
           let temp = this.target.querySelector("#month-no-results");
@@ -415,6 +538,8 @@
         this.target.dataset.mapview == "true" ? "none" : "block";
       this.map.style.display =
         this.target.dataset.mapview == "true" ? "block" : "none";
+      this.map.style.pointerEvents =
+        this.target.dataset.mapview == "true" ? "all" : "none";
 
     },
 
@@ -804,7 +929,7 @@
           elementType: "geometry.stroke",
           stylers: [
             {
-              color: "##000000",
+              color: "#000000",
             },
           ],
         },
@@ -891,7 +1016,7 @@
           elementType: "labels",
           stylers: [
             {
-              visibility: "off",
+              visibility: "simplified",
             },
           ],
         },
@@ -904,12 +1029,33 @@
             },
           ],
         },
+		{
+          featureType: "road.local",
+          elementType: "geometry",
+          stylers: [
+            {
+              visibility: "simplified",
+            },
+          ],
+        },
         {
           featureType: "road.local",
           elementType: "labels",
           stylers: [
             {
-              visibility: "off",
+              visibility: "simplified",
+            },
+          ],
+        },
+		{
+          featureType: "road.local",
+          elementType: "labels.text",
+          stylers: [
+			{
+              visibility: "simplified",
+            },
+            {
+              color: "#b6a998",
             },
           ],
         },
@@ -978,7 +1124,6 @@
       zoomControlDiv.index = 1;
       map.controls[google.maps.ControlPosition.TOP_RIGHT].push(zoomControlDiv);
 
-      // return
       return map;
     },
 
