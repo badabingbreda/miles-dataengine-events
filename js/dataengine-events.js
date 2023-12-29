@@ -929,7 +929,7 @@
           elementType: "geometry.stroke",
           stylers: [
             {
-              color: "##000000",
+              color: "#000000",
             },
           ],
         },
@@ -1016,7 +1016,7 @@
           elementType: "labels",
           stylers: [
             {
-              visibility: "off",
+              visibility: "simplified",
             },
           ],
         },
@@ -1029,12 +1029,33 @@
             },
           ],
         },
+		{
+          featureType: "road.local",
+          elementType: "geometry",
+          stylers: [
+            {
+              visibility: "simplified",
+            },
+          ],
+        },
         {
           featureType: "road.local",
           elementType: "labels",
           stylers: [
             {
-              visibility: "off",
+              visibility: "simplified",
+            },
+          ],
+        },
+		{
+          featureType: "road.local",
+          elementType: "labels.text",
+          stylers: [
+			{
+              visibility: "simplified",
+            },
+            {
+              color: "#b6a998",
             },
           ],
         },

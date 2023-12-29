@@ -289,7 +289,11 @@ class Events {
 	
 		}
 
+		// don't assume the $data is comprised of content
+		// if no events are available, return empty strings
 		$json_event_map = isset( $data['map'] ) ? json_encode( $data[ 'map' ] ) : json_encode([]);
+		$listings = isset( $data['listing'] ) ? $data[ 'listing' ] : '';
+		$pagination = isset( $data['pagination'] ) ? $data[ 'pagination' ] : '';
 
 		$lowerbound = date( 'Ym' );		// get lower bound, disable prev button
 		$upperbound = self::reformat( $last[ 'sort_date' ] , 'Ymd' , 'Ym' );
@@ -333,7 +337,7 @@ class Events {
 						</div>
 						<p>Filter By:</p>
 						<div id="date_range" class="event-facet">
-							<button class="facet-toggle"> <h4 class="facet-title">Date Range</h4><span class="facet-toggle-sign">+</span> </button>
+							<button class="facet-toggle"> <h4 class="facet-title">Dates</h4><span class="facet-toggle-sign">+</span> </button>
 							<fieldset>
 								<legend class="sr-only">Date Range</legend>
 								{$daterange_picker}
@@ -362,13 +366,13 @@ class Events {
 						{$switch_view}
 					</div>
 					<div id="listing">
-						{$data['listing']}
+						{$listings}
 					</div>
 					<div id="event-map-container" class="map-container">
 						{$events_map}
 					</div>
 					<div id="pagination">
-						{$data['pagination']}
+						{$pagination}
 					</div>
 					<script style="text/javascript">
 						var dataengine_map_events = {$json_event_map};
@@ -695,7 +699,7 @@ class Events {
 			$event_time = $event[ 'start_time_pm' ] . ' - ' . $event[ 'end_time_pm' ];
 		}
 
-		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'F j, Y' );
+		$nice_date = self::reformat( $event[ 'sort_date' ] , 'Ymd' , 'M j, Y' );
 
 		$thumbnail_img = '';  // Initialize to empty string
 		if (!empty($event['thumbnail_url'])) {
