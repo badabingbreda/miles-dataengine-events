@@ -15,6 +15,7 @@ shortcode examples:
 
 |version|date|changes|
 |---|---|---|
+|1.5.0|Dec 29th, 2023|Added daterangepicker for date interval|
 |1.4.1|Dec 13th, 2023|View switch buttons behavior, switch between monthly, list, map view|
 |1.4.0|Dec 13th, 2023|Add Google Map code to plugin|
 |1.3.3|Dec 8th, 2023|Add Maps payload in plugin|
